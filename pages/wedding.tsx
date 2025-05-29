@@ -126,9 +126,9 @@ export default function Wedding() {
 
       {/* Hero Section */}
       <section className="flex flex-col items-center justify-center py-20 bg-cover bg-center" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80)' }}>
-        <h1 className="text-5xl md:text-7xl font-serif text-white drop-shadow-md">
+        <h5 className="text-4xl md:text-4xl font-serif text-white drop-shadow-md">
           {wedding.groom_name} & {wedding.bride_name}
-        </h1>
+        </h5>
         <p className="mt-4 text-xl md:text-2xl text-white drop-shadow-md">
           {wedding.day}, {wedding.date} at {wedding.time}
         </p>
