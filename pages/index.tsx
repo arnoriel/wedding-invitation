@@ -48,6 +48,14 @@ interface Gift {
   envelope_number: string;
 }
 
+interface Congrats {
+  id: string;
+  name: string;
+  words: string;
+  presence: string;
+  created_at: string;
+}
+
 interface Asset {
   music: string;
 }
@@ -56,10 +64,13 @@ export default function Wedding() {
   const [wedding, setWedding] = useState<Wedding | null>(null);
   const [moments, setMoments] = useState<Moment[]>([]);
   const [gifts, setGifts] = useState<Gift[]>([]);
+  const [congrats, setCongrats] = useState<Congrats[]>([]);
   const [asset, setAsset] = useState<Asset | null>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showGiftsPage, setShowGiftsPage] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);
+  const [formData, setFormData] = useState({ name: '', words: '', presence: 'present' });
+  const [formError, setFormError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -86,6 +97,14 @@ export default function Wedding() {
           .eq('wedding_id', weddingData.id);
         if (giftsError) throw giftsError;
         setGifts(giftsData);
+
+        const { data: congratsData, error: congratsError } = await supabase
+          .from('congrats')
+          .select('id, name, words, presence, created_at')
+          .eq('wedding_id', weddingData.id)
+          .order('created_at', { ascending: false });
+        if (congratsError) throw congratsError;
+        setCongrats(congratsData);
 
         const { data: assetsData, error: assetsError } = await supabase
           .from('assets')
@@ -122,6 +141,41 @@ export default function Wedding() {
   const closeGiftsPage = () => {
     setShowGiftsPage(false);
     window.scrollTo(0, scrollPosition);
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim() || !formData.words.trim()) {
+      setFormError('Name and message are required.');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('congrats')
+        .insert([
+          {
+            wedding_id: wedding?.id,
+            name: formData.name,
+            words: formData.words,
+            presence: formData.presence,
+          },
+        ])
+        .select();
+      if (error) throw error;
+
+      setCongrats([data[0], ...congrats]);
+      setFormData({ name: '', words: '', presence: 'present' });
+      setFormError(null);
+    } catch (error) {
+      console.error('Error submitting congrats:', error);
+      setFormError('Failed to submit your message. Please try again.');
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   if (!wedding) {
@@ -270,6 +324,78 @@ export default function Wedding() {
               </button>
             </section>
           )}
+
+          <section className="py-16 px-4 md:px-8 max-w-4xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-serif text-pink-600 text-center mb-8">Congrats and Prayers</h2>
+            <form onSubmit={handleFormSubmit} className="space-y-4 mb-8">
+              <div>
+                <label htmlFor="name" className="block text-gray-700 font-medium mb-2">Your Name</label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  placeholder="Enter your name"
+                  maxLength={255}
+                />
+              </div>
+              <div>
+                <label htmlFor="words" className="block text-gray-700 font-medium mb-2">Your Message</label>
+                <textarea
+                  id="words"
+                  name="words"
+                  value={formData.words}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  placeholder="Write your congratulations and prayers"
+                  rows={4}
+                  maxLength={1000}
+                />
+              </div>
+              <div>
+                <label htmlFor="presence" className="block text-gray-700 font-medium mb-2">Attendance</label>
+                <select
+                  id="presence"
+                  name="presence"
+                  value={formData.presence}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-pink-500"
+                >
+                  <option value="present">Will Attend</option>
+                  <option value="not_present">Will Not Attend</option>
+                </select>
+              </div>
+              {formError && <p className="text-red-500">{formError}</p>}
+              <button
+                type="submit"
+                className="bg-pink-500 text-white p-2 rounded hover:bg-pink-600 transition-colors duration-300 w-full"
+              >
+                Submit
+              </button>
+            </form>
+
+            <div className="max-h-96 overflow-y-auto space-y-4">
+              {congrats.length > 0 ? (
+                congrats.map((congrat, index) => (
+                  <div
+                    key={index}
+                    className="p-4 bg-white rounded-lg shadow-md border-l-4 border-pink-300"
+                  >
+                    <p className="text-gray-700 font-medium"><b>{congrat.name}</b></p>
+                    <p className="text-gray-600">{congrat.words}</p>
+                    <p className="text-gray-500 text-sm mt-2">
+                      {congrat.presence === 'present' ? 'Will Attend' : 'Will Not Attend'} •{' '}
+                      {new Date(congrat.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-600 text-center">No messages yet. Be the first to leave a message!</p>
+              )}
+            </div>
+          </section>
 
           <footer className="py-8 bg-pink-100 text-center text-gray-600">
             <p>Created with love for {wedding.groom_name} & {wedding.bride_name}</p>
