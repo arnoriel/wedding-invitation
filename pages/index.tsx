@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import Image from 'next/image';
+import AOS from 'aos'; // Import AOS
+import 'aos/dist/aos.css'; // Import AOS styles
 
 // Heroicons for volume on/off
 const SpeakerWaveIcon = () => (
@@ -72,6 +74,16 @@ export default function Wedding() {
   const [formData, setFormData] = useState({ name: '', words: '', presence: 'present' });
   const [formError, setFormError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize AOS
+  useEffect(() => {
+    AOS.init({
+      duration: 1000, // Duration of animations in milliseconds
+      easing: 'ease-in-out', // Smooth easing for elegance
+      once: true, // Animations happen only once when scrolling down
+      mirror: false, // Prevent animations when scrolling up
+    });
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -179,31 +191,63 @@ export default function Wedding() {
   };
 
   if (!wedding) {
-    return <div className="flex justify-center items-center h-screen text-gray-600 text-lg">Loading...</div>;
+    return <div className="flex justify-center items-center h-screen text-ivory-800 text-lg bg-ivory-50">Loading...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-ivory-50 font-sans">
+    <div className="min-h-screen bg-ivory-50 font-serif relative overflow-x-hidden">
+      {/* Top Left Image */}
+      <div className="absolute top-0 left-0 z-10" data-aos="fade-down" data-aos-delay="100">
+        <Image
+          src="/images/top.png"
+          alt="Top Decoration"
+          width={150}
+          height={150}
+          className="object-contain"
+        />
+      </div>
+
+      {/* Side Groom Left Image */}
+      <div className="absolute left-0 top-190 transform -translate-y-1/2 z-10" data-aos="fade-right" data-aos-delay="200">
+        <div className="relative">
+          <Image
+            src="/images/side-groom-left.png"
+            alt="Groom Side Decoration"
+            width={100}
+            height={300}
+            className="object-contain"
+          />
+        </div>
+      </div>
+
+      {/* Side Bride Right Image */}
+      <div className="absolute right-0 top-300 transform -translate-y-1/2 z-10" data-aos="fade-left" data-aos-delay="300">
+        <div className="relative">
+          <Image
+            src="/images/side-bride-right.png"
+            alt="Bride Side Decoration"
+            width={100}
+            height={300}
+            className="object-contain"
+          />
+        </div>
+      </div>
+
       {asset?.music && (
-        <audio
-          ref={audioRef}
-          autoPlay
-          src={asset.music}
-          className="mx-auto rounded-lg shadow-md"
-        >
+        <audio ref={audioRef} autoPlay src={asset.music}>
           Your browser does not support the audio element.
         </audio>
       )}
 
       {showGiftsPage ? (
-        // Full-page Gift Envelopes Section
-        <section className="fixed inset-0 bg-pink-50 flex flex-col items-center justify-center p-4 md:p-8 z-50 overflow-auto">
-          <div className="max-w-4xl w-full">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-3xl md:text-4xl font-serif text-pink-600">Gift Envelopes</h2>
+        // Gift Envelopes Section
+        <section className="fixed inset-0 bg-ivory-100 flex flex-col items-center justify-center p-6 md:p-12 z-50 overflow-auto" data-aos="zoom-in" data-aos-duration="800">
+          <div className="max-w-2xl w-full bg-white rounded-lg shadow-lg p-8 border-2 border-gold-200">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-3xl font-serif text-gold-700">Wedding Gifts</h2>
               <button
                 onClick={closeGiftsPage}
-                className="bg-pink-500 text-white p-2 rounded-full hover:bg-pink-600 transition-colors duration-300"
+                className="text-gold-600 hover:text-gold-800 p-2 rounded-full transition-colors duration-300"
                 aria-label="Close"
               >
                 <XMarkIcon />
@@ -214,14 +258,16 @@ export default function Wedding() {
                 gifts.map((gift, index) => (
                   <div
                     key={index}
-                    className="p-4 bg-white rounded-lg shadow-md border-l-4 border-pink-300"
+                    className="p-4 bg-ivory-50 rounded-md:shadow-sm border-l-4 border-green-200"
+                    data-aos="fade-up"
+                    data-aos-delay={`${index * 100}`}
                   >
-                    <p className="text-gray-700 font-medium">{gift.envelope_name}</p>
-                    <p className="text-gray-600">{gift.envelope_number}</p>
+                    <p className="text-gold-700 font-medium">{gift.envelope_name}</p>
+                    <p className="text-ivory-800">{gift.envelope_number}</p>
                   </div>
                 ))
               ) : (
-                <p className="text-gray-600 text-center">No gift envelopes available.</p>
+                <p className="text-ivory-800 text-center">No gift envelopes available.</p>
               )}
             </div>
           </div>
@@ -232,78 +278,98 @@ export default function Wedding() {
           {asset?.music && (
             <button
               onClick={toggleAudio}
-              className="fixed left-4 top-1/2 transform -translate-y-1/2 bg-pink-100 text-pink-600 p-4 rounded-full shadow-lg hover:bg-pink-200 transition-colors duration-300 z-50"
+              className="fixed left-6 top-1/2 transform -translate-y-1/2 bg-gold-100 text-gold-700 p-3 rounded-full shadow-md hover:bg-gold-200 transition-colors duration-300 z-50"
+              data-aos="fade-right"
+              data-aos-delay="400"
             >
               {isPlaying ? <SpeakerWaveIcon /> : <SpeakerXMarkIcon />}
             </button>
           )}
 
-          <section className="flex flex-col items-center justify-center py-20 bg-cover bg-center" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80)' }}>
-            <h5 className="text-2xl md:text-2xl font-serif text-white drop-shadow-md">
-              {wedding.groom_name} & {wedding.bride_name}
-            </h5>
-            <p className="mt-4 text-xl md:text-2xl text-white drop-shadow-md">
-              {wedding.day}, {wedding.date} at {wedding.time}
-            </p>
-            <p className="mt-2 text-lg text-white drop-shadow-md">{wedding.place}</p>
+          <section
+            className="flex flex-col items-center justify-center py-24 bg-cover bg-center relative min-h-[400px]"
+            style={{
+              backgroundImage: 'url(https://images.unsplash.com/photo-1629129836873-0d3db7a49b8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80)'
+            }}
+            data-aos="fade-in"
+            data-aos-duration="1200"
+          >
+            <div className="absolute inset-0 bg-ivory-900 bg-opacity-60 backdrop-blur-sm"></div>
+            <div className="relative z-10 text-center px-4" data-aos="fade-up" data-aos-delay="200">
+              <h5 className="text-lg md:text-xl font-serif text-gold-300 mb-4">
+                The Wedding Invitation of
+              </h5>
+              <h2 className="text-4xl md:text-5xl font-serif text-gold-300 mb-6 tracking-wide">
+                {wedding.groom} & {wedding.bride}
+              </h2>
+              <p className="text-lg md:text-xl text-ivory-100 max-w-2xl mx-auto">
+                {wedding.description}
+              </p>
+            </div>
           </section>
 
-          {wedding.description && (
-            <section className="py-16 px-4 md:px-8 max-w-4xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-serif text-pink-600 mb-6">Our Story</h2>
-              <p className="text-gray-700 text-lg leading-relaxed">{wedding.description}</p>
+          <section className="py-16 px-6 md:px-12 bg-white">
+            <section className="py-16 px-6 md:px-12 max-w-3xl mx-auto text-center bg-ivory-50" data-aos="fade-up" data-aos-delay="100">
+              <h2 className="text-3xl md:text-4xl font-serif text-gold-700 mb-6">Our Beloveds</h2>
             </section>
-          )}
-
-          <section className="py-16 px-4 md:px-8 bg-white">
-            <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="text-center">
+            <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
+              <div className="text-center" data-aos="fade-right" data-aos-delay="200">
+                <p className="text-2xl md:text-3xl font-serif text-gold-700 mb-2">The Groom</p>
                 {wedding.groom_img && (
-                  <div className="relative w-64 h-64 mx-auto mb-4">
+                  <div className="relative w-60 h-60 mx-auto mb-6">
                     <Image
                       src={wedding.groom_img}
                       alt={wedding.groom}
                       fill
-                      className="object-cover rounded-full border-4 border-pink-200 shadow-lg"
-                      sizes="(max-width: 768px) 100vw, 256px"
+                      className="object-cover rounded-full border-4 border-gold-200 shadow-md"
+                      sizes="(max-width: 768px) 100vw, 288px"
                     />
                   </div>
                 )}
-                <h3 className="text-2xl font-serif text-pink-600">{wedding.groom}</h3>
-                <p className="text-gray-600 mt-2">{wedding.groom_name}</p>
-                {wedding.groom_desc && <p className="text-gray-700 mt-4 leading-relaxed">{wedding.groom_desc}</p>}
+                <h3 className="text-2xl font-serif text-gold-700">{wedding.groom}</h3>
+                <p className="text-ivory-800 mt-2">{wedding.groom_name}</p>
+                {wedding.groom_desc && <p className="text-ivory-800 mt-4 leading-relaxed">{wedding.groom_desc}</p>}
               </div>
-              <div className="text-center">
+              <div className="text-center" data-aos="fade-left" data-aos-delay="300">
+                <p className="text-2xl md:text-3xl font-serif text-gold-700 mb-2">The Bride</p>
                 {wedding.bride_img && (
-                  <div className="relative w-64 h-64 mx-auto mb-4">
+                  <div className="relative w-60 h-60 mx-auto mb-6">
                     <Image
                       src={wedding.bride_img}
                       alt={wedding.bride}
                       fill
-                      className="object-cover rounded-full border-4 border-pink-200 shadow-lg"
-                      sizes="(max-width: 768px) 100vw, 256px"
+                      className="object-cover rounded-full border-4 border-gold-200 shadow-md"
+                      sizes="(max-width: 768px) 100vw, 288px"
                     />
                   </div>
                 )}
-                <h3 className="text-2xl font-serif text-pink-600">{wedding.bride}</h3>
-                <p className="text-gray-600 mt-2">{wedding.bride_name}</p>
-                {wedding.bride_desc && <p className="text-gray-700 mt-4 leading-relaxed">{wedding.bride_desc}</p>}
+                <h3 className="text-2xl font-serif text-gold-700">{wedding.bride}</h3>
+                <p className="text-ivory-800 mt-2">{wedding.bride_name}</p>
+                {wedding.bride_desc && <p className="text-ivory-800 mt-4 leading-relaxed">{wedding.bride_desc}</p>}
               </div>
             </div>
           </section>
 
+          <section className="py-16 px-6 md:px-12 max-w-3xl mx-auto text-center bg-green-50" data-aos="fade-up" data-aos-delay="100">
+            <h2 className="text-3xl md:text-4xl font-serif text-gold-700 mb-6">Join Us</h2>
+            <p className="text-ivory-800 text-lg">{wedding.day}</p>
+            <p className="text-ivory-800 text-lg">{wedding.date}</p>
+            <p className="text-ivory-800 text-lg">{wedding.time}</p>
+            <p className="text-ivory-800 text-lg">{wedding.place}</p>
+          </section>
+
           {moments.length > 0 && (
-            <section className="py-16 px-4 md:px-8 bg-pink-50">
-              <h2 className="text-3xl md:text-4xl font-serif text-pink-600 text-center mb-8">Our Moments</h2>
-              <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <section className="py-16 px-6 md:px-12 bg-ivory-100" data-aos="fade-in" data-aos-delay="100">
+              <h2 className="text-3xl md:text-4xl font-serif text-gold-700 text-center mb-8">Our Moments</h2>
+              <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                 {moments.flatMap((moment) =>
                   moment.moments_img.map((img, index) => (
-                    <div key={index} className="relative w-full h-64">
+                    <div key={index} className="relative w-full h-80" data-aos="zoom-in" data-aos-delay={`${index * 100}`}>
                       <Image
                         src={img}
                         alt={`Moment ${index + 1}`}
                         fill
-                        className="object-cover rounded-lg shadow-md hover:scale-105 transition-transform duration-300"
+                        className="object-cover rounded-lg shadow-md hover:scale-105 transition-transform duration-300 border-2 border-gold-100"
                         sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
                       />
                     </div>
@@ -314,91 +380,105 @@ export default function Wedding() {
           )}
 
           {gifts.length > 0 && (
-            <section className="py-16 px-4 md:px-8 max-w-4xl mx-auto">
-              <h2 className="text-3xl md:text-4xl font-serif text-pink-600 text-center mb-8">Gift Envelopes</h2>
+            <section className="py-16 px-6 md:px-12 max-w-3xl mx-auto text-center" data-aos="fade-up" data-aos-delay="100">
+              <h2 className="text-3xl md:text-4xl font-serif text-gold-700 mb-6">Gifts</h2>
               <button
                 onClick={openGiftsPage}
-                className="bg-pink-500 text-white p-2 rounded hover:bg-pink-600 transition-colors duration-300 w-full text-center"
+                className="bg-gold-500 text-ivory-50 font-medium p-4 rounded-lg hover:bg-gold-600 transition-colors duration-300 w-full max-w-xs shadow-md border border-gold-300 focus:outline-none focus:ring-2 focus:ring-green-300"
               >
-                Open Gifts
+                View Gifts
               </button>
             </section>
           )}
 
-          <section className="py-16 px-4 md:px-8 max-w-4xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-serif text-pink-600 text-center mb-8">Congrats and Prayers</h2>
-            <form onSubmit={handleFormSubmit} className="space-y-4 mb-8">
-              <div>
-                <label htmlFor="name" className="block text-gray-700 font-medium mb-2">Your Name</label>
+          <section className="py-16 px-6 md:px-12 max-w-3xl mx-auto bg-ivory-50" data-aos="fade-up" data-aos-delay="100">
+            <h2 className="text-3xl md:text-4xl font-serif text-gold-700 text-center mb-8">Blessings & Wishes</h2>
+            <form onSubmit={handleFormSubmit} className="space-y-6 mb-8">
+              <div data-aos="fade-up" data-aos-delay="200">
+                <label htmlFor="name" className="block text-ivory-800 font-medium mb-2">Your Name</label>
                 <input
                   type="text"
                   id="name"
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  className="w-full p-3 border border-gold-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-300 bg-ivory-50"
                   placeholder="Enter your name"
                   maxLength={255}
                 />
               </div>
-              <div>
-                <label htmlFor="words" className="block text-gray-700 font-medium mb-2">Your Message</label>
+              <div data-aos="fade-up" data-aos-delay="300">
+                <label htmlFor="words" className="block text-ivory-800 font-medium mb-2">Your Message</label>
                 <textarea
                   id="words"
                   name="words"
                   value={formData.words}
                   onChange={handleInputChange}
-                  className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-pink-500"
-                  placeholder="Write your congratulations and prayers"
-                  rows={4}
+                  className="w-full p-3 border border-gold-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-300 bg-ivory-50"
+                  placeholder="Write your blessings and wishes"
+                  rows={5}
                   maxLength={1000}
                 />
               </div>
-              <div>
-                <label htmlFor="presence" className="block text-gray-700 font-medium mb-2">Attendance</label>
+              <div data-aos="fade-up" data-aos-delay="400">
+                <label htmlFor="presence" className="block text-ivory-800 font-medium mb-2">Attendance</label>
                 <select
                   id="presence"
                   name="presence"
                   value={formData.presence}
                   onChange={handleInputChange}
-                  className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  className="w-full p-3 border border-gold-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-300 bg-ivory-50"
                 >
                   <option value="present">Will Attend</option>
                   <option value="not_present">Will Not Attend</option>
                 </select>
               </div>
-              {formError && <p className="text-red-500">{formError}</p>}
+              {formError && <p className="text-red-600">{formError}</p>}
               <button
                 type="submit"
-                className="bg-pink-500 text-white p-2 rounded hover:bg-pink-600 transition-colors duration-300 w-full"
+                className="bg-gold-500 text-white p-3 rounded-lg hover:bg-gold-600 transition-colors duration-300 w-full"
+                data-aos="fade-up"
+                data-aos-delay="500"
               >
-                Submit
+                Send Wishes
               </button>
             </form>
 
-            <div className="max-h-96 overflow-y-auto space-y-4">
+            <div className="max-h-96 overflow-y-auto space-y-6">
               {congrats.length > 0 ? (
                 congrats.map((congrat, index) => (
                   <div
                     key={index}
-                    className="p-4 bg-white rounded-lg shadow-md border-l-4 border-pink-300"
+                    className="p-6 bg-white rounded-lg shadow-md border-l-4 border-green-200"
+                    data-aos="fade-up"
+                    data-aos-delay={`${index * 100}`}
                   >
-                    <p className="text-gray-700 font-medium"><b>{congrat.name}</b></p>
-                    <p className="text-gray-600">{congrat.words}</p>
-                    <p className="text-gray-500 text-sm mt-2">
+                    <p className="text-gold-700 font-medium"><b>{congrat.name}</b></p>
+                    <p className="text-ivory-800 mt-2">{congrat.words}</p>
+                    <p className="text-ivory-600 text-sm mt-2">
                       {congrat.presence === 'present' ? 'Will Attend' : 'Will Not Attend'} •{' '}
                       {new Date(congrat.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 ))
               ) : (
-                <p className="text-gray-600 text-center">No messages yet. Be the first to leave a message!</p>
+                <p className="text-ivory-800 text-center">No wishes yet. Be the first to share your blessings!</p>
               )}
             </div>
           </section>
 
-          <footer className="py-8 bg-pink-100 text-center text-gray-600">
-            <p>Created with love for {wedding.groom_name} & {wedding.bride_name}</p>
+          <footer className="py-8 bg-green-50 text-center text-ivory-800 relative" data-aos="fade-up" data-aos-delay="100">
+            <div className="absolute bottom-0 left-0" data-aos="fade-up" data-aos-delay="200">
+              <Image
+                src="/images/footer.png"
+                alt="Footer Decoration"
+                width={150}
+                height={100}
+                className="object-contain"
+              />
+            </div>
+            <p className="relative">Crafted with love for {wedding.groom_name} & {wedding.bride_name}</p>
+            <p className="relative mt-2 text-sm">Celebrate our union with joy and blessings</p>
           </footer>
         </>
       )}
