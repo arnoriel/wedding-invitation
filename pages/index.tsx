@@ -205,25 +205,40 @@ export default function Wedding() {
       {showModal && (
         <div className="fixed inset-0 bg-ivory-900 bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm">
           <div
-            className={`w-full h-full flex flex-col items-center justify-center text-center p-6 shadow-2xl transition-transform duration-500 ease-in-out ${isClosing ? '-translate-y-full' : 'translate-y-0'
-              }`}
+            className={`w-full h-full flex flex-col items-center justify-center text-center p-6 shadow-2xl transition-transform duration-500 ease-in-out ${isClosing ? '-translate-y-full' : 'translate-y-0'}`}
             style={{
               backgroundImage: wedding?.modal_img ? `url(${wedding.modal_img})` : 'none',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               backgroundColor: wedding?.modal_img ? 'transparent' : '#F8F1E9', // Fallback ke ivory-50 jika tidak ada modal_img
+              position: 'relative', // Tambahkan posisi relatif untuk overlay
             }}
           >
-            <h1 className="text-4xl md:text-5xl font-serif text-gold-700 mb-4 mt-[-10%]">
-              Welcome to the Wedding of {wedding.groom} & {wedding.bride}
-            </h1>
-            <p className="text-xl md:text-2xl text-ivory-800 mb-6">Yang terhormat, Tamu Undangan</p>
-            <button
-              onClick={handleCloseModal}
-              className="bg-gold-500 text-ivory-50 font-medium py-3 px-6 rounded-lg hover:bg-gold-600 transition-colors duration-300 shadow-md border border-gold-300 focus:outline-none focus:ring-2 focus:ring-green-300"
-            >
-              Enter Site
-            </button>
+            {/* Overlay untuk efek gelap */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'black',
+                opacity: 0.5,
+                zIndex: 1,
+              }}
+            />
+            <div className="relative z-10"> {/* Konten di atas overlay */}
+              <h1 className="text-4xl md:text-5xl font-serif text-white mb-70 mt-[-10%]">
+                Welcome to the Wedding of {wedding.groom} & {wedding.bride}
+              </h1>
+              <p className="text-xl md:text-2xl text-white mb-4">Yang terhormat, Tamu Undangan</p>
+              <button
+                onClick={handleCloseModal}
+                className="bg-gold-500 text-white font-medium py-3 px-6 rounded-lg hover:bg-white transition-colors duration-300 shadow-md border border-white focus:outline-none focus:ring-2 focus:ring-green-300"
+              >
+                Enter Site
+              </button>
+            </div>
           </div>
         </div>
       )}
