@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import Image from 'next/image';
-import AOS from 'aos'; // Import AOS
-import 'aos/dist/aos.css'; // Import AOS styles
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 
 // Heroicons for volume on/off
 const SpeakerWaveIcon = () => (
@@ -68,8 +68,10 @@ export default function Wedding() {
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [congrats, setCongrats] = useState<Congrats[]>([]);
   const [asset, setAsset] = useState<Asset | null>(null);
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false); // Mulai dengan false
   const [showGiftsPage, setShowGiftsPage] = useState(false);
+  const [showModal, setShowModal] = useState(true);
+  const [isClosing, setIsClosing] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [formData, setFormData] = useState({ name: '', words: '', presence: 'present' });
   const [formError, setFormError] = useState<string | null>(null);
@@ -78,13 +80,14 @@ export default function Wedding() {
   // Initialize AOS
   useEffect(() => {
     AOS.init({
-      duration: 1000, // Duration of animations in milliseconds
-      easing: 'ease-in-out', // Smooth easing for elegance
-      once: true, // Animations happen only once when scrolling down
-      mirror: false, // Prevent animations when scrolling up
+      duration: 1000,
+      easing: 'ease-in-out',
+      once: true,
+      mirror: false,
     });
   }, []);
 
+  // Fetch data
   useEffect(() => {
     async function fetchData() {
       try {
@@ -138,7 +141,7 @@ export default function Wedding() {
       if (isPlaying) {
         audioRef.current.pause();
       } else {
-        audioRef.current.play().catch((error) => console.error('Auto-play error:', error));
+        audioRef.current.play().catch((error) => console.error('Audio play error:', error));
       }
       setIsPlaying(!isPlaying);
     }
@@ -190,12 +193,46 @@ export default function Wedding() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleCloseModal = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setShowModal(false);
+      // Play audio after modal closes
+      if (audioRef.current && asset?.music) {
+        audioRef.current.play().catch((error) => console.error('Auto-play error:', error));
+        setIsPlaying(true);
+      }
+    }, 500); // Match animation duration
+  };
+
   if (!wedding) {
     return <div className="flex justify-center items-center h-screen text-ivory-800 text-lg bg-ivory-50">Loading...</div>;
   }
 
   return (
     <div className="min-h-screen bg-ivory-50 font-serif relative overflow-x-hidden">
+      {/* Full-Screen Welcome Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-ivory-900 bg-white flex items-center justify-center z-50 backdrop-blur-sm">
+          <div
+            className={`w-full h-full bg-ivory-50 flex flex-col items-center justify-center text-center p-6 shadow-2xl transition-transform duration-500 ease-in-out ${
+              isClosing ? '-translate-y-full' : 'translate-y-0'
+            }`}
+          >
+            <h1 className="text-4xl md:text-5xl font-serif text-gold-700 mb-4">
+              Welcome to the Wedding of {wedding.groom} & {wedding.bride}
+            </h1>
+            <p className="text-xl md:text-2xl text-ivory-800 mb-6">Yang terhormat, Tamu Undangan</p>
+            <button
+              onClick={handleCloseModal}
+              className="bg-gold-500 text-ivory-50 font-medium py-3 px-6 rounded-lg hover:bg-gold-600 transition-colors duration-300 shadow-md border border-gold-300 focus:outline-none focus:ring-2 focus:ring-green-300"
+            >
+              Enter Site
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top Left Image */}
       <div className="absolute top-0 left-0 z-10" data-aos="fade-down" data-aos-delay="100">
         <Image
@@ -233,8 +270,9 @@ export default function Wedding() {
         </div>
       </div>
 
+      {/* Audio element */}
       {asset?.music && (
-        <audio ref={audioRef} autoPlay src={asset.music}>
+        <audio ref={audioRef} src={asset.music} loop>
           Your browser does not support the audio element.
         </audio>
       )}
@@ -258,7 +296,7 @@ export default function Wedding() {
                 gifts.map((gift, index) => (
                   <div
                     key={index}
-                    className="p-4 bg-ivory-50 rounded-md:shadow-sm border-l-4 border-green-200"
+                    className="p-4 bg-ivory-50 rounded-md shadow-sm border-l-4 border-green-200"
                     data-aos="fade-up"
                     data-aos-delay={`${index * 100}`}
                   >
@@ -278,9 +316,7 @@ export default function Wedding() {
           {asset?.music && (
             <button
               onClick={toggleAudio}
-              className="fixed left-6 top-1/2 transform -translate-y-1/2 bg-gold-100 text-gold-700 p-3 rounded-full shadow-md hover:bg-gold-200 transition-colors duration-300 z-50"
-              data-aos="fade-right"
-              data-aos-delay="400"
+              className="fixed bottom-6 left-6 bg-gold-100 text-gold-700 p-3 rounded-full shadow-md hover:bg-gold-200 transition-colors duration-300 z-50"
             >
               {isPlaying ? <SpeakerWaveIcon /> : <SpeakerXMarkIcon />}
             </button>
@@ -436,7 +472,7 @@ export default function Wedding() {
               {formError && <p className="text-red-600">{formError}</p>}
               <button
                 type="submit"
-                className="bg-gold-500 text-white p-3 rounded-lg hover:bg-gold-600 transition-colors duration-300 w-full"
+                className="bg-black text-white p-3 rounded-lg hover:bg-black transition-colors duration-300 w-full"
                 data-aos="fade-up"
                 data-aos-delay="500"
               >
@@ -467,8 +503,8 @@ export default function Wedding() {
             </div>
           </section>
 
-          <footer className="py-8 bg-green-50 text-center text-ivory-800 relative" data-aos="fade-up" data-aos-delay="100">
-            <div className="absolute bottom-0 left-0" data-aos="fade-up" data-aos-delay="200">
+          <footer className="py-8 bg-green-50 text-center text-ivory-800 relative">
+            <div className="absolute bottom-0 left-0">
               <Image
                 src="/images/footer.png"
                 alt="Footer Decoration"

@@ -10,8 +10,8 @@ interface WeddingForm {
     bride_name: string;
     groom_desc: string;
     bride_desc: string;
-    groom_img: File | null;
-    bride_img: File | null;
+    groom_img: File | null | string;
+    bride_img: File | null | string;
     description: string;
     place: string;
     date: string;
@@ -74,7 +74,11 @@ export default function CMS() {
                     .single();
                 if (weddingError && !weddingError.message.includes('No rows found')) throw weddingError;
                 if (weddingData) {
-                    setWedding(weddingData);
+                    setWedding({
+                        ...weddingData,
+                        groom_img: weddingData.groom_img || null,
+                        bride_img: weddingData.bride_img || null,
+                    });
                     setWeddingId(weddingData.id);
                 }
 
@@ -113,9 +117,10 @@ export default function CMS() {
     const handleWeddingSubmit = async (e: FormEvent) => {
         e.preventDefault();
         try {
-            let groomImgUrl = wedding.groom_img ? '' : wedding.groom;
-            let brideImgUrl = wedding.bride_img ? '' : wedding.bride;
-            if (wedding.groom_img) {
+            let groomImgUrl = typeof wedding.groom_img === 'string' ? wedding.groom_img : wedding.groom;
+            let brideImgUrl = typeof wedding.bride_img === 'string' ? wedding.bride_img : wedding.bride;
+
+            if (wedding.groom_img instanceof File) {
                 const { data, error } = await supabase.storage
                     .from('groom-images')
                     .upload(`groom-${Date.now()}.jpg`, wedding.groom_img, {
@@ -128,7 +133,7 @@ export default function CMS() {
                 }
                 groomImgUrl = supabase.storage.from('groom-images').getPublicUrl(data.path).data.publicUrl;
             }
-            if (wedding.bride_img) {
+            if (wedding.bride_img instanceof File) {
                 const { data, error } = await supabase.storage
                     .from('bride-images')
                     .upload(`bride-${Date.now()}.jpg`, wedding.bride_img, {
@@ -152,8 +157,8 @@ export default function CMS() {
                         bride_name: wedding.bride_name,
                         groom_desc: wedding.groom_desc,
                         bride_desc: wedding.bride_desc,
-                        groom_img: groomImgUrl || wedding.groom_img,
-                        bride_img: brideImgUrl || wedding.bride_img,
+                        groom_img: groomImgUrl,
+                        bride_img: brideImgUrl,
                         description: wedding.description,
                         place: wedding.place,
                         date: wedding.date,
@@ -193,6 +198,11 @@ export default function CMS() {
                 setWeddingId(data.id);
                 alert('Wedding details saved!');
             }
+            setWedding({
+                ...wedding,
+                groom_img: groomImgUrl,
+                bride_img: brideImgUrl,
+            });
         } catch (error) {
             console.error('Error saving wedding:', error);
             alert('Failed to save wedding details.');
@@ -411,233 +421,341 @@ export default function CMS() {
                 alert(`Successfully deleted ${count} congratulatory message(s)!`);
             }
         } catch (error) {
-            // Use unknown instead of any
             console.error('Error deleting all congrats:', (error as Error).message);
             alert(`Failed to delete congratulatory messages: ${(error as Error).message}`);
         }
     };
 
     return (
-        <div className="container mx-auto p-4 bg-gradient-to-b from-pink-50 to-ivory-50">
-            <h1 className="text-3xl font-bold mb-6 text-pink-600 text-center">Wedding Invitation CMS</h1>
+        <div className="min-h-screen bg-gradient-to-br from-rose-50 via-ivory-50 to-pink-50 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-4xl mx-auto">
+                <h1 className="text-4xl font-extrabold text-center text-rose-700 mb-12 tracking-tight">
+                    Wedding Invitation CMS
+                </h1>
 
-            <form onSubmit={handleWeddingSubmit} className="mb-8 p-4 bg-white rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4 text-pink-600">Wedding Details</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input
-                        type="text"
-                        placeholder="Groom"
-                        value={wedding.groom}
-                        onChange={(e) => setWedding({ ...wedding, groom: e.target.value })}
-                        className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-300"
-                        required
-                    />
-                    <input
-                        type="text"
-                        placeholder="Bride"
-                        value={wedding.bride}
-                        onChange={(e) => setWedding({ ...wedding, bride: e.target.value })}
-                        className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-300"
-                        required
-                    />
-                    <input
-                        type="text"
-                        placeholder="Groom Name"
-                        value={wedding.groom_name}
-                        onChange={(e) => setWedding({ ...wedding, groom_name: e.target.value })}
-                        className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-300"
-                        required
-                    />
-                    <input
-                        type="text"
-                        placeholder="Bride Name"
-                        value={wedding.bride_name}
-                        onChange={(e) => setWedding({ ...wedding, bride_name: e.target.value })}
-                        className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-300"
-                        required
-                    />
-                    <textarea
-                        placeholder="Groom Description"
-                        value={wedding.groom_desc}
-                        onChange={(e) => setWedding({ ...wedding, groom_desc: e.target.value })}
-                        className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-300"
-                    />
-                    <textarea
-                        placeholder="Bride Description"
-                        value={wedding.bride_desc}
-                        onChange={(e) => setWedding({ ...wedding, bride_desc: e.target.value })}
-                        className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-300"
-                    />
-                    <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setWedding({ ...wedding, groom_img: e.target.files?.[0] || null })}
-                        className="p-2"
-                    />
-                    <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => setWedding({ ...wedding, bride_img: e.target.files?.[0] || null })}
-                        className="p-2"
-                    />
-                    <textarea
-                        placeholder="Description"
-                        value={wedding.description}
-                        onChange={(e) => setWedding({ ...wedding, description: e.target.value })}
-                        className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-300"
-                    />
-                    <input
-                        type="text"
-                        placeholder="Place"
-                        value={wedding.place}
-                        onChange={(e) => setWedding({ ...wedding, place: e.target.value })}
-                        className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-300"
-                        required
-                    />
-                    <input
-                        type="date"
-                        value={wedding.date}
-                        onChange={(e) => setWedding({ ...wedding, date: e.target.value })}
-                        className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-300"
-                        required
-                    />
-                    <input
-                        type="text"
-                        placeholder="Day (e.g., Saturday)"
-                        value={wedding.day}
-                        onChange={(e) => setWedding({ ...wedding, day: e.target.value })}
-                        className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-300"
-                        required
-                    />
-                    <input
-                        type="time"
-                        value={wedding.time}
-                        onChange={(e) => setWedding({ ...wedding, time: e.target.value })}
-                        className="p-2 border rounded focus:outline-none focus:ring-2 focus:ring-pink-300"
-                        required
-                    />
-                </div>
-                <button type="submit" className="mt-4 bg-pink-500 text-white p-2 rounded hover:bg-pink-600 transition-colors duration-300">
-                    {weddingId ? 'Update Wedding Details' : 'Save Wedding Details'}
-                </button>
-            </form>
-
-            <div className="mb-8 p-4 bg-white rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4 text-pink-600">Moments</h2>
-                <form onSubmit={handleMomentsSubmit} className="mb-4">
-                    <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={(e) => setNewMoments({ moments_img: Array.from(e.target.files || []) })}
-                        className="p-2 mb-2"
-                    />
-                    <button type="submit" className="bg-pink-500 text-white p-2 rounded hover:bg-pink-600 transition-colors duration-300">
-                        Add Moments
+                {/* Wedding Details Section */}
+                <form
+                    onSubmit={handleWeddingSubmit}
+                    className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100"
+                >
+                    <h2 className="text-2xl font-semibold mb-6 text-rose-600">Wedding Details</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nama Panggilan Pengantin Pria</label>
+                            <input
+                                type="text"
+                                value={wedding.groom}
+                                onChange={(e) => setWedding({ ...wedding, groom: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nama Panggilan Pengantin Wanita</label>
+                            <input
+                                type="text"
+                                value={wedding.bride}
+                                onChange={(e) => setWedding({ ...wedding, bride: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap Pengantin Pria</label>
+                            <input
+                                type="text"
+                                value={wedding.groom_name}
+                                onChange={(e) => setWedding({ ...wedding, groom_name: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap Pengantin Wanita</label>
+                            <input
+                                type="text"
+                                value={wedding.bride_name}
+                                onChange={(e) => setWedding({ ...wedding, bride_name: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi Pengantin Pria</label>
+                            <textarea
+                                value={wedding.groom_desc}
+                                onChange={(e) => setWedding({ ...wedding, groom_desc: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                rows={4}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi Pengantin Wanita</label>
+                            <textarea
+                                value={wedding.bride_desc}
+                                onChange={(e) => setWedding({ ...wedding, bride_desc: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                rows={4}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Foto Pengantin Pria</label>
+                            {typeof wedding.groom_img === 'string' && wedding.groom_img && (
+                                <div className="mb-4 relative w-full h-40">
+                                    <Image
+                                        src={wedding.groom_img}
+                                        alt="Current Groom Image"
+                                        fill
+                                        className="object-cover rounded-lg shadow-sm"
+                                        sizes="(max-width: 640px) 100vw, 50vw"
+                                    />
+                                </div>
+                            )}
+                            {!wedding.groom_img && (
+                                <p className="text-gray-500 text-sm mb-2">No image uploaded yet.</p>
+                            )}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => setWedding({ ...wedding, groom_img: e.target.files?.[0] || null })}
+                                className="w-full p-3 text-gray-600 file:mr-4 file:py-2 file:px- pharmacological-4 file:rounded-lg file:border-0 file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 transition-colors"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Foto Pengantin Wanita</label>
+                            {typeof wedding.bride_img === 'string' && wedding.bride_img && (
+                                <div className="mb-4 relative w-full h-40">
+                                    <Image
+                                        src={wedding.bride_img}
+                                        alt="Current Bride Image"
+                                        fill
+                                        className="object-cover rounded-lg shadow-sm"
+                                        sizes="(max-width: 640px) 100vw, 50vw"
+                                    />
+                                </div>
+                            )}
+                            {!wedding.bride_img && (
+                                <p className="text-gray-500 text-sm mb-2">No image uploaded yet.</p>
+                            )}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => setWedding({ ...wedding, bride_img: e.target.files?.[0] || null })}
+                                className="w-full p-3 text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 transition-colors"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Ucapan Pembukaan</label>
+                            <textarea
+                                value={wedding.description}
+                                onChange={(e) => setWedding({ ...wedding, description: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                rows={4}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Lokasi</label>
+                            <input
+                                type="text"
+                                value={wedding.place}
+                                onChange={(e) => setWedding({ ...wedding, place: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal</label>
+                            <input
+                                type="date"
+                                value={wedding.date}
+                                onChange={(e) => setWedding({ ...wedding, date: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Hari</label>
+                            <input
+                                type="text"
+                                value={wedding.day}
+                                onChange={(e) => setWedding({ ...wedding, day: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                placeholder="e.g., Saturday"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Waktu</label>
+                            <input
+                                type="time"
+                                value={wedding.time}
+                                onChange={(e) => setWedding({ ...wedding, time: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                required
+                            />
+                        </div>
+                    </div>
+                    <button
+                        type="submit"
+                        className="mt-6 w-full bg-rose-500 text-white py-3 rounded-lg hover:bg-rose-600 transition-colors duration-300 font-medium"
+                    >
+                        {weddingId ? 'Update Wedding Details' : 'Save Wedding Details'}
                     </button>
                 </form>
-                {moments.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        {moments.map((moment) =>
-                            moment.moments_img.map((img, index) => (
-                                <div key={`${moment.id}-${index}`} className="relative w-full h-48">
-                                    <Image
-                                        src={img}
-                                        alt={`Moment ${index + 1}`}
-                                        fill
-                                        className="object-cover rounded-lg shadow-md"
-                                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
-                                    />
+
+                {/* Moments Section */}
+                <div className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100">
+                    <h2 className="text-2xl font-semibold mb-6 text-rose-600">Moments</h2>
+                    <form onSubmit={handleMomentsSubmit} className="mb-6">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Upload Moment Images</label>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={(e) => setNewMoments({ moments_img: Array.from(e.target.files || []) })}
+                                className="w-full p-3 text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 transition-colors"
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            className="mt-4 bg-rose-500 text-white py-3 px-6 rounded-lg hover:bg-rose-600 transition-colors duration-300 font-medium"
+                        >
+                            Add Moments
+                        </button>
+                    </form>
+                    {moments.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                            {moments.map((moment) =>
+                                moment.moments_img.map((img, index) => (
+                                    <div key={`${moment.id}-${index}`} className="relative w-full h-64 group">
+                                        <Image
+                                            src={img}
+                                            alt={`Moment ${index + 1}`}
+                                            fill
+                                            className="object-cover rounded-lg shadow-md transition-transform duration-300 group-hover:scale-105"
+                                            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
+                                        />
+                                        <button
+                                            onClick={() => handleDeleteMoment(moment.id, moment.moments_img)}
+                                            className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors duration-300 opacity-0 group-hover:opacity-100"
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    ) : (
+                        <p className="text-gray-500 italic">No moments added yet.</p>
+                    )}
+                </div>
+
+                {/* Gift Envelopes Section */}
+                <div className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100">
+                    <h2 className="text-2xl font-semibold mb-6 text-rose-600">Gift Envelopes</h2>
+                    <form onSubmit={handleGiftSubmit} className="mb-6 space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Envelope Name</label>
+                            <input
+                                type="text"
+                                value={newGift.envelope_name}
+                                onChange={(e) => setNewGift({ ...newGift, envelope_name: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Envelope Number</label>
+                            <input
+                                type="text"
+                                value={newGift.envelope_number}
+                                onChange={(e) => setNewGift({ ...newGift, envelope_number: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                required
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            className="w-full bg-rose-500 text-white py-3 rounded-lg hover:bg-rose-600 transition-colors duration-300 font-medium"
+                        >
+                            Add Gift
+                        </button>
+                    </form>
+                    {gifts.length > 0 ? (
+                        <div className="space-y-4">
+                            {gifts.map((gift) => (
+                                <div
+                                    key={gift.id}
+                                    className="p-4 bg-rose-50 rounded-lg shadow-sm border-l-4 border-rose-300 flex justify-between items-center transition-transform duration-300 hover:shadow-md"
+                                >
+                                    <div>
+                                        <p className="text-gray-700 font-medium">{gift.envelope_name}</p>
+                                        <p className="text-gray-500 text-sm">{gift.envelope_number}</p>
+                                    </div>
                                     <button
-                                        onClick={() => handleDeleteMoment(moment.id, moment.moments_img)}
-                                        className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors duration-300"
+                                        onClick={() => handleDeleteGift(gift.id)}
+                                        className="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors duration-300"
                                     >
                                         Delete
                                     </button>
                                 </div>
-                            ))
-                        )}
-                    </div>
-                ) : (
-                    <p className="text-gray-600">No moments added yet.</p>
-                )}
-            </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-gray-500 italic">No gifts added yet.</p>
+                    )}
+                </div>
 
-            <div className="mb-8 p-4 bg-white rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4 text-pink-600">Gift Envelopes</h2>
-                <form onSubmit={handleGiftSubmit} className="mb-4">
-                    <input
-                        type="text"
-                        placeholder="Envelope Name"
-                        value={newGift.envelope_name}
-                        onChange={(e) => setNewGift({ ...newGift, envelope_name: e.target.value })}
-                        className="p-2 border rounded mb-2 focus:outline-none focus:ring-2 focus:ring-pink-300"
-                        required
-                    />
-                    <input
-                        type="text"
-                        placeholder="Envelope Number"
-                        value={newGift.envelope_number}
-                        onChange={(e) => setNewGift({ ...newGift, envelope_number: e.target.value })}
-                        className="p-2 border rounded mb-2 focus:outline-none focus:ring-2 focus:ring-pink-300"
-                        required
-                    />
-                    <button type="submit" className="bg-pink-500 text-white p-2 rounded hover:bg-pink-600 transition-colors duration-300">
-                        Add Gift
+                {/* Music Section */}
+                <form
+                    onSubmit={handleAssetSubmit}
+                    className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100"
+                >
+                    <h2 className="text-2xl font-semibold mb-6 text-rose-600">Update Music</h2>
+                    {asset.music_url && (
+                        <div className="mb-4">
+                            <p className="text-gray-600">
+                                Current Music:{' '}
+                                <a
+                                    href={asset.music_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-rose-600 underline hover:text-rose-700"
+                                >
+                                    Listen to current music
+                                </a>
+                            </p>
+                        </div>
+                    )}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Upload Music File</label>
+                        <input
+                            type="file"
+                            accept="audio/mp3"
+                            onChange={(e) => setAsset({ ...asset, music: e.target.files?.[0] || null })}
+                            className="w-full p-3 text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 transition-colors"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        className="mt-4 w-full bg-rose-500 text-white py-3 rounded-lg hover:bg-rose-600 transition-colors duration-300 font-medium"
+                    >
+                        Update Music
                     </button>
                 </form>
-                {gifts.length > 0 ? (
-                    <div className="space-y-4">
-                        {gifts.map((gift) => (
-                            <div
-                                key={gift.id}
-                                className="p-4 bg-gray-50 rounded-lg shadow-sm border-l-4 border-pink-300 flex justify-between items-center"
-                            >
-                                <div>
-                                    <p className="text-gray-700 font-medium">{gift.envelope_name}</p>
-                                    <p className="text-gray-600">{gift.envelope_number}</p>
-                                </div>
-                                <button
-                                    onClick={() => handleDeleteGift(gift.id)}
-                                    className="bg-red-500 text-white p-2 rounded hover:bg-red-600 transition-colors duration-300"
-                                >
-                                    Delete
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-gray-600">No gifts added yet.</p>
-                )}
-            </div>
 
-            <form onSubmit={handleAssetSubmit} className="mb-8 p-4 bg-white rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4 text-pink-600">Update Music</h2>
-                {asset.music_url && (
-                    <div className="mb-4">
-                        <p className="text-gray-600">Current Music: <a href={asset.music_url} target="_blank" rel="noopener noreferrer" className="text-pink-600 underline">Listen to current music</a></p>
-                    </div>
-                )}
-                <input
-                    type="file"
-                    accept="audio/mp3"
-                    onChange={(e) => setAsset({ ...asset, music: e.target.files?.[0] || null })}
-                    className="p-2"
-                />
-                <button type="submit" className="mt-4 bg-pink-500 text-white p-2 rounded hover:bg-pink-600 transition-colors duration-300">
-                    Update Music
-                </button>
-            </form>
-
-            <div className="p-4 bg-white rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4 text-pink-600">Manage Congrats</h2>
-                <button
-                    onClick={handleDeleteAllCongrats}
-                    className="bg-red-500 text-white p-2 rounded hover:bg-red-600 transition-colors duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    disabled={!weddingId}
-                >
-                    Delete All Congrats
-                </button>
+                {/* Manage Congrats Section */}
+                <div className="p-8 bg-white rounded-2xl shadow-lg border border-rose-100">
+                    <h2 className="text-2xl font-semibold mb-6 text-rose-600">Manage Congrats</h2>
+                    <button
+                        onClick={handleDeleteAllCongrats}
+                        className="w-full bg-red-500 text-white py-3 rounded-lg hover:bg-red-600 transition-colors duration-300 font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        disabled={!weddingId}
+                    >
+                        Delete All Congrats
+                    </button>
+                </div>
             </div>
         </div>
     );
