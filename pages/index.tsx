@@ -23,10 +23,13 @@ interface Wedding {
   bride: string;
   groom_name: string;
   bride_name: string;
+  groom_initial: string;
+  bride_initial: string;
   groom_desc: string;
   bride_desc: string;
   groom_img: string;
   bride_img: string;
+  modal_img: string | null;
   description: string;
   place: string;
   date: string;
@@ -200,13 +203,18 @@ export default function Wedding() {
     <div className="min-h-screen bg-ivory-50 font-serif relative overflow-x-hidden">
       {/* Full-Screen Welcome Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-ivory-900 bg-white flex items-center justify-center z-50 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-ivory-900 bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm">
           <div
-            className={`w-full h-full bg-ivory-50 flex flex-col items-center justify-center text-center p-6 shadow-2xl transition-transform duration-500 ease-in-out ${
-              isClosing ? '-translate-y-full' : 'translate-y-0'
-            }`}
+            className={`w-full h-full flex flex-col items-center justify-center text-center p-6 shadow-2xl transition-transform duration-500 ease-in-out ${isClosing ? '-translate-y-full' : 'translate-y-0'
+              }`}
+            style={{
+              backgroundImage: wedding?.modal_img ? `url(${wedding.modal_img})` : 'none',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundColor: wedding?.modal_img ? 'transparent' : '#F8F1E9', // Fallback ke ivory-50 jika tidak ada modal_img
+            }}
           >
-            <h1 className="text-4xl md:text-5xl font-serif text-gold-700 mb-4">
+            <h1 className="text-4xl md:text-5xl font-serif text-gold-700 mb-4 mt-[-10%]">
               Welcome to the Wedding of {wedding.groom} & {wedding.bride}
             </h1>
             <p className="text-xl md:text-2xl text-ivory-800 mb-6">Yang terhormat, Tamu Undangan</p>
@@ -301,40 +309,45 @@ export default function Wedding() {
           <section className="py-16 px-6 md:px-12 max-w-3xl mx-auto text-center bg-ivory-50" data-aos="fade-up" data-aos-delay="100">
             <h2 className="text-3xl md:text-4xl font-serif text-gold-700 mb-6">Our Beloveds</h2>
           </section>
-          <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
-            <div className="text-center" data-aos="fade-right" data-aos-delay="200">
-              <p className="text-2xl md:text-3xl font-serif text-gold-700 mb-2">The Groom</p>
-              {wedding.groom_img && (
-                <div className="relative w-60 h-60 mx-auto mb-6">
-                  <Image
-                    src={wedding.groom_img}
-                    alt={wedding.groom}
-                    fill
-                    className="object-cover rounded-full border-4 border-gold-200 shadow-md"
-                    sizes="(max-width: 768px) 100vw, 288px"
-                  />
-                </div>
-              )}
-              <h3 className="text-2xl font-serif text-gold-700">{wedding.groom}</h3>
-              <p className="text-ivory-800 mt-2">{wedding.groom_name}</p>
-              {wedding.groom_desc && <p className="text-ivory-800 mt-4 leading-relaxed">{wedding.groom_desc}</p>}
-            </div>
-            <div className="text-center" data-aos="fade-left" data-aos-delay="300">
-              <p className="text-2xl md:text-3xl font-serif text-gold-700 mb-2">The Bride</p>
-              {wedding.bride_img && (
-                <div className="relative w-60 h-60 mx-auto mb-6">
-                  <Image
-                    src={wedding.bride_img}
-                    alt={wedding.bride}
-                    fill
-                    className="object-cover rounded-full border-4 border-gold-200 shadow-md"
-                    sizes="(max-width: 768px) 100vw, 288px"
-                  />
-                </div>
-              )}
-              <h3 className="text-2xl font-serif text-gold-700">{wedding.bride}</h3>
-              <p className="text-ivory-800 mt-2">{wedding.bride_name}</p>
-              {wedding.bride_desc && <p className="text-ivory-800 mt-4 leading-relaxed">{wedding.bride_desc}</p>}
+          <div className="max-w-4xl mx-auto relative">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              <div className="text-center" data-aos="fade-right" data-aos-delay="200">
+                <p className="text-2xl md:text-3xl font-serif text-gold-700 mb-2">The Groom</p>
+                {wedding.groom_img && (
+                  <div className="relative w-60 h-60 mx-auto mb-6">
+                    <Image
+                      src={wedding.groom_img}
+                      alt={wedding.groom}
+                      fill
+                      className="object-cover rounded-full border-4 border-gold-200 shadow-md"
+                      sizes="(max-width: 768px) 100vw, 288px"
+                    />
+                  </div>
+                )}
+                <h3 className="text-2xl font-serif text-gold-700">{wedding.groom}</h3>
+                <p className="text-ivory-800 mt-2">{wedding.groom_name}</p>
+                {wedding.groom_desc && <p className="text-ivory-800 mt-4 leading-relaxed">{wedding.groom_desc}</p>}
+              </div>
+              <div className="text-center md:absolute md:top-1/2 md:left-1/2 md:transform md:-translate-x-1/2 md:-translate-y-1/2" data-aos="fade-right" data-aos-delay="400">
+                <h3 className="text-2xl md:text-3xl font-serif text-gold-700">{wedding.groom_initial} & {wedding.bride_initial}</h3>
+              </div>
+              <div className="text-center" data-aos="fade-left" data-aos-delay="300">
+                <p className="text-2xl md:text-3xl font-serif text-gold-700 mb-2">The Bride</p>
+                {wedding.bride_img && (
+                  <div className="relative w-60 h-60 mx-auto mb-6">
+                    <Image
+                      src={wedding.bride_img}
+                      alt={wedding.bride}
+                      fill
+                      className="object-cover rounded-full border-4 border-gold-200 shadow-md"
+                      sizes="(max-width: 768px) 100vw, 288px"
+                    />
+                  </div>
+                )}
+                <h3 className="text-2xl font-serif text-gold-700">{wedding.bride}</h3>
+                <p className="text-ivory-800 mt-2">{wedding.bride_name}</p>
+                {wedding.bride_desc && <p className="text-ivory-800 mt-4 leading-relaxed">{wedding.bride_desc}</p>}
+              </div>
             </div>
           </div>
         </section>

@@ -8,10 +8,13 @@ interface WeddingForm {
     bride: string;
     groom_name: string;
     bride_name: string;
+    groom_initial: string;
+    bride_initial: string;
     groom_desc: string;
     bride_desc: string;
     groom_img: File | null | string;
     bride_img: File | null | string;
+    modal_img: File | null | string; // Tambah kolom untuk modal image
     description: string;
     place: string;
     date: string;
@@ -47,10 +50,13 @@ export default function CMS() {
         bride: '',
         groom_name: '',
         bride_name: '',
+        groom_initial: '',
+        bride_initial: '',
         groom_desc: '',
         bride_desc: '',
         groom_img: null,
         bride_img: null,
+        modal_img: null, // Tambah state untuk modal image
         description: '',
         place: '',
         date: '',
@@ -78,6 +84,9 @@ export default function CMS() {
                         ...weddingData,
                         groom_img: weddingData.groom_img || null,
                         bride_img: weddingData.bride_img || null,
+                        modal_img: weddingData.modal_img || null, // Pastikan default null jika kolom tidak ada
+                        groom_initial: weddingData.groom_initial || '',
+                        bride_initial: weddingData.bride_initial || '',
                     });
                     setWeddingId(weddingData.id);
                 }
@@ -119,6 +128,7 @@ export default function CMS() {
         try {
             let groomImgUrl = typeof wedding.groom_img === 'string' ? wedding.groom_img : wedding.groom;
             let brideImgUrl = typeof wedding.bride_img === 'string' ? wedding.bride_img : wedding.bride;
+            let modalImgUrl = typeof wedding.modal_img === 'string' ? wedding.modal_img : null; // Inisialisasi modal_img
 
             if (wedding.groom_img instanceof File) {
                 const { data, error } = await supabase.storage
@@ -146,6 +156,19 @@ export default function CMS() {
                 }
                 brideImgUrl = supabase.storage.from('bride-images').getPublicUrl(data.path).data.publicUrl;
             }
+            if (wedding.modal_img instanceof File) {
+                const { data, error } = await supabase.storage
+                    .from('images')
+                    .upload(`modal-${Date.now()}.jpg`, wedding.modal_img, {
+                        cacheControl: '3600',
+                        upsert: false,
+                    });
+                if (error) {
+                    console.error('Modal image upload error:', error);
+                    throw error;
+                }
+                modalImgUrl = supabase.storage.from('images').getPublicUrl(data.path).data.publicUrl;
+            }
 
             if (weddingId) {
                 const { error } = await supabase
@@ -155,10 +178,13 @@ export default function CMS() {
                         bride: wedding.bride,
                         groom_name: wedding.groom_name,
                         bride_name: wedding.bride_name,
+                        groom_initial: wedding.groom_initial,
+                        bride_initial: wedding.bride_initial,
                         groom_desc: wedding.groom_desc,
                         bride_desc: wedding.bride_desc,
                         groom_img: groomImgUrl,
                         bride_img: brideImgUrl,
+                        modal_img: modalImgUrl, // Update modal_img
                         description: wedding.description,
                         place: wedding.place,
                         date: wedding.date,
@@ -179,10 +205,13 @@ export default function CMS() {
                         bride: wedding.bride,
                         groom_name: wedding.groom_name,
                         bride_name: wedding.bride_name,
+                        groom_initial: wedding.groom_initial,
+                        bride_initial: wedding.bride_initial,
                         groom_desc: wedding.groom_desc,
                         bride_desc: wedding.bride_desc,
                         groom_img: groomImgUrl,
                         bride_img: brideImgUrl,
+                        modal_img: modalImgUrl, // Insert modal_img
                         description: wedding.description,
                         place: wedding.place,
                         date: wedding.date,
@@ -202,6 +231,7 @@ export default function CMS() {
                 ...wedding,
                 groom_img: groomImgUrl,
                 bride_img: brideImgUrl,
+                modal_img: modalImgUrl, // Update state dengan URL modal_img
             });
         } catch (error) {
             console.error('Error saving wedding:', error);
@@ -418,7 +448,7 @@ export default function CMS() {
             if (count === 0) {
                 alert('No congratulatory messages found to delete.');
             } else {
-                alert(`Successfully deleted ${count} congratulatory message(s)!`);
+                alert(`Successfully deleted ${count} congratulate(s)!`);
             }
         } catch (error) {
             console.error('Error deleting all congrats:', (error as Error).message);
@@ -458,6 +488,24 @@ export default function CMS() {
                                 onChange={(e) => setWedding({ ...wedding, bride: e.target.value })}
                                 className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Inisial Pengantin Pria</label>
+                            <input
+                                type="text"
+                                value={wedding.groom_initial}
+                                onChange={(e) => setWedding({ ...wedding, groom_initial: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Inisial Pengantin Wanita</label>
+                            <input
+                                type="text"
+                                value={wedding.bride_initial}
+                                onChange={(e) => setWedding({ ...wedding, bride_initial: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                             />
                         </div>
                         <div>
@@ -518,7 +566,7 @@ export default function CMS() {
                                 type="file"
                                 accept="image/*"
                                 onChange={(e) => setWedding({ ...wedding, groom_img: e.target.files?.[0] || null })}
-                                className="w-full p-3 text-gray-600 file:mr-4 file:py-2 file:px- pharmacological-4 file:rounded-lg file:border-0 file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 transition-colors"
+                                className="w-full p-3 text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 transition-colors"
                             />
                         </div>
                         <div>
@@ -541,6 +589,29 @@ export default function CMS() {
                                 type="file"
                                 accept="image/*"
                                 onChange={(e) => setWedding({ ...wedding, bride_img: e.target.files?.[0] || null })}
+                                className="w-full p-3 text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 transition-colors"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Foto Modal</label>
+                            {typeof wedding.modal_img === 'string' && wedding.modal_img && (
+                                <div className="mb-4 relative w-full h-40">
+                                    <Image
+                                        src={wedding.modal_img}
+                                        alt="Current Modal Image"
+                                        fill
+                                        className="object-cover rounded-lg shadow-sm"
+                                        sizes="(max-width: 640px) 100vw, 50vw"
+                                    />
+                                </div>
+                            )}
+                            {!wedding.modal_img && (
+                                <p className="text-gray-500 text-sm mb-2">No modal image uploaded yet.</p>
+                            )}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => setWedding({ ...wedding, modal_img: e.target.files?.[0] || null })}
                                 className="w-full p-3 text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 transition-colors"
                             />
                         </div>

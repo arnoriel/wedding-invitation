@@ -62,3 +62,16 @@ body {
   height: auto;
   display: block;
 }
+
+@keyframes fadeSlide {
+  0%, 20% {
+    opacity: 1;
+  }
+  25%, 100% {
+    opacity: 0;
+  }
+}
+
+.animate-fadeSlide {
+  animation: fadeSlide 5s infinite;
+}
