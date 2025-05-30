@@ -17,13 +17,6 @@ const SpeakerXMarkIcon = () => (
   </svg>
 );
 
-// Heroicon for close button
-const XMarkIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-  </svg>
-);
-
 interface Wedding {
   id: string;
   groom: string;
@@ -68,24 +61,17 @@ export default function Wedding() {
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [congrats, setCongrats] = useState<Congrats[]>([]);
   const [asset, setAsset] = useState<Asset | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false); // Mulai dengan false
-  const [showGiftsPage, setShowGiftsPage] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [showGiftsDropdown, setShowGiftsDropdown] = useState(false);
   const [showModal, setShowModal] = useState(true);
   const [isClosing, setIsClosing] = useState(false);
-  const [scrollPosition, setScrollPosition] = useState(0);
   const [formData, setFormData] = useState({ name: '', words: '', presence: 'present' });
   const [formError, setFormError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Initialize AOS
-  useEffect(() => {
-    AOS.init({
-      duration: 1000,
-      easing: 'ease-in-out',
-      once: true,
-      mirror: false,
-    });
-  }, []);
+  // Calculate attendance counts
+  const attendCount = congrats.filter((congrat) => congrat.presence === 'present').length;
+  const notAttendCount = congrats.filter((congrat) => congrat.presence === 'not_present').length;
 
   // Fetch data
   useEffect(() => {
@@ -147,15 +133,8 @@ export default function Wedding() {
     }
   };
 
-  const openGiftsPage = () => {
-    setScrollPosition(window.scrollY);
-    setShowGiftsPage(true);
-    window.scrollTo(0, 0);
-  };
-
-  const closeGiftsPage = () => {
-    setShowGiftsPage(false);
-    window.scrollTo(0, scrollPosition);
+  const toggleGiftsDropdown = () => {
+    setShowGiftsDropdown(!showGiftsDropdown);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -197,6 +176,14 @@ export default function Wedding() {
     setIsClosing(true);
     setTimeout(() => {
       setShowModal(false);
+      // Initialize AOS after modal closes
+      AOS.init({
+        duration: 1000,
+        easing: 'ease-in-out',
+        once: true,
+        mirror: false,
+      });
+      AOS.refresh(); // Refresh AOS to trigger animations
       // Play audio after modal closes
       if (audioRef.current && asset?.music) {
         audioRef.current.play().catch((error) => console.error('Auto-play error:', error));
@@ -277,247 +264,291 @@ export default function Wedding() {
         </audio>
       )}
 
-      {showGiftsPage ? (
-        // Gift Envelopes Section
-        <section className="fixed inset-0 bg-ivory-100 flex flex-col items-center justify-center p-6 md:p-12 z-50 overflow-auto" data-aos="zoom-in" data-aos-duration="800">
-          <div className="max-w-2xl w-full bg-white rounded-lg shadow-lg p-8 border-2 border-gold-200">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-3xl font-serif text-gold-700">Wedding Gifts</h2>
-              <button
-                onClick={closeGiftsPage}
-                className="text-gold-600 hover:text-gold-800 p-2 rounded-full transition-colors duration-300"
-                aria-label="Close"
-              >
-                <XMarkIcon />
-              </button>
-            </div>
-            <div className="space-y-4">
-              {gifts.length > 0 ? (
-                gifts.map((gift, index) => (
-                  <div
-                    key={index}
-                    className="p-4 bg-ivory-50 rounded-md shadow-sm border-l-4 border-green-200"
-                    data-aos="fade-up"
-                    data-aos-delay={`${index * 100}`}
-                  >
-                    <p className="text-gold-700 font-medium">{gift.envelope_name}</p>
-                    <p className="text-ivory-800">{gift.envelope_number}</p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-ivory-800 text-center">No gift envelopes available.</p>
+      {/* Main Page Content */}
+      <>
+        {asset?.music && (
+          <button
+            onClick={toggleAudio}
+            className="fixed bottom-6 left-6 bg-gold-100 text-gold-700 p-3 rounded-full shadow-md hover:bg-gold-200 transition-colors duration-300 z-50"
+          >
+            {isPlaying ? <SpeakerWaveIcon /> : <SpeakerXMarkIcon />}
+          </button>
+        )}
+
+        <section
+          className="flex flex-col items-center justify-center py-24 bg-cover bg-center relative min-h-[400px]"
+          style={{
+            backgroundImage: 'url(https://images.unsplash.com/photo-1629129836873-0d3db7a49b8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80)'
+          }}
+          data-aos="fade-in"
+          data-aos-duration="1200"
+        >
+          <div className="absolute inset-0 bg-ivory-900 bg-opacity-60 backdrop-blur-sm"></div>
+          <div className="relative z-10 text-center px-4" data-aos="fade-up" data-aos-delay="200">
+            <h5 className="text-lg md:text-xl font-serif text-gold-300 mb-4">
+              The Wedding Invitation of
+            </h5>
+            <h2 className="text-4xl md:text-5xl font-serif text-gold-300 mb-6 tracking-wide">
+              {wedding.groom} & {wedding.bride}
+            </h2>
+            <p className="text-lg md:text-xl text-ivory-100 max-w-2xl mx-auto">
+              {wedding.description}
+            </p>
+          </div>
+        </section>
+
+        <section className="py-16 px-6 md:px-12 bg-white">
+          <section className="py-16 px-6 md:px-12 max-w-3xl mx-auto text-center bg-ivory-50" data-aos="fade-up" data-aos-delay="100">
+            <h2 className="text-3xl md:text-4xl font-serif text-gold-700 mb-6">Our Beloveds</h2>
+          </section>
+          <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
+            <div className="text-center" data-aos="fade-right" data-aos-delay="200">
+              <p className="text-2xl md:text-3xl font-serif text-gold-700 mb-2">The Groom</p>
+              {wedding.groom_img && (
+                <div className="relative w-60 h-60 mx-auto mb-6">
+                  <Image
+                    src={wedding.groom_img}
+                    alt={wedding.groom}
+                    fill
+                    className="object-cover rounded-full border-4 border-gold-200 shadow-md"
+                    sizes="(max-width: 768px) 100vw, 288px"
+                  />
+                </div>
               )}
+              <h3 className="text-2xl font-serif text-gold-700">{wedding.groom}</h3>
+              <p className="text-ivory-800 mt-2">{wedding.groom_name}</p>
+              {wedding.groom_desc && <p className="text-ivory-800 mt-4 leading-relaxed">{wedding.groom_desc}</p>}
+            </div>
+            <div className="text-center" data-aos="fade-left" data-aos-delay="300">
+              <p className="text-2xl md:text-3xl font-serif text-gold-700 mb-2">The Bride</p>
+              {wedding.bride_img && (
+                <div className="relative w-60 h-60 mx-auto mb-6">
+                  <Image
+                    src={wedding.bride_img}
+                    alt={wedding.bride}
+                    fill
+                    className="object-cover rounded-full border-4 border-gold-200 shadow-md"
+                    sizes="(max-width: 768px) 100vw, 288px"
+                  />
+                </div>
+              )}
+              <h3 className="text-2xl font-serif text-gold-700">{wedding.bride}</h3>
+              <p className="text-ivory-800 mt-2">{wedding.bride_name}</p>
+              {wedding.bride_desc && <p className="text-ivory-800 mt-4 leading-relaxed">{wedding.bride_desc}</p>}
             </div>
           </div>
         </section>
-      ) : (
-        // Main Page Content
-        <>
-          {asset?.music && (
-            <button
-              onClick={toggleAudio}
-              className="fixed bottom-6 left-6 bg-gold-100 text-gold-700 p-3 rounded-full shadow-md hover:bg-gold-200 transition-colors duration-300 z-50"
-            >
-              {isPlaying ? <SpeakerWaveIcon /> : <SpeakerXMarkIcon />}
-            </button>
-          )}
 
-          <section
-            className="flex flex-col items-center justify-center py-24 bg-cover bg-center relative min-h-[400px]"
-            style={{
-              backgroundImage: 'url(https://images.unsplash.com/photo-1629129836873-0d3db7a49b8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80)'
-            }}
-            data-aos="fade-in"
-            data-aos-duration="1200"
-          >
-            <div className="absolute inset-0 bg-ivory-900 bg-opacity-60 backdrop-blur-sm"></div>
-            <div className="relative z-10 text-center px-4" data-aos="fade-up" data-aos-delay="200">
-              <h5 className="text-lg md:text-xl font-serif text-gold-300 mb-4">
-                The Wedding Invitation of
-              </h5>
-              <h2 className="text-4xl md:text-5xl font-serif text-gold-300 mb-6 tracking-wide">
-                {wedding.groom} & {wedding.bride}
-              </h2>
-              <p className="text-lg md:text-xl text-ivory-100 max-w-2xl mx-auto">
-                {wedding.description}
-              </p>
+        <section className="py-16 px-6 md:px-12 max-w-4xl mx-auto text-center bg-gradient-to-br from-green-50 via-ivory-50 to-gold-50 rounded-xl" data-aos="fade-up" data-aos-delay="100">
+          <h2 className="text-3xl md:text-4xl font-serif text-gold-700 mb-10 font-extrabold tracking-tight drop-shadow-sm">We Warmly Invite You</h2>
+          <div className="grid grid-cols-1 gap-6 md:gap-8">
+            <div className="flex flex-col items-center">
+              <span className="text-sm uppercase tracking-wider text-gold-600 font-medium bg-gold-100 px-3 py-1 rounded-full mb-2">Day</span>
+              <p className="text-ivory-800 text-xl md:text-2xl font-light italic">{wedding.day}</p>
             </div>
-          </section>
-
-          <section className="py-16 px-6 md:px-12 bg-white">
-            <section className="py-16 px-6 md:px-12 max-w-3xl mx-auto text-center bg-ivory-50" data-aos="fade-up" data-aos-delay="100">
-              <h2 className="text-3xl md:text-4xl font-serif text-gold-700 mb-6">Our Beloveds</h2>
-            </section>
-            <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
-              <div className="text-center" data-aos="fade-right" data-aos-delay="200">
-                <p className="text-2xl md:text-3xl font-serif text-gold-700 mb-2">The Groom</p>
-                {wedding.groom_img && (
-                  <div className="relative w-60 h-60 mx-auto mb-6">
-                    <Image
-                      src={wedding.groom_img}
-                      alt={wedding.groom}
-                      fill
-                      className="object-cover rounded-full border-4 border-gold-200 shadow-md"
-                      sizes="(max-width: 768px) 100vw, 288px"
-                    />
-                  </div>
-                )}
-                <h3 className="text-2xl font-serif text-gold-700">{wedding.groom}</h3>
-                <p className="text-ivory-800 mt-2">{wedding.groom_name}</p>
-                {wedding.groom_desc && <p className="text-ivory-800 mt-4 leading-relaxed">{wedding.groom_desc}</p>}
-              </div>
-              <div className="text-center" data-aos="fade-left" data-aos-delay="300">
-                <p className="text-2xl md:text-3xl font-serif text-gold-700 mb-2">The Bride</p>
-                {wedding.bride_img && (
-                  <div className="relative w-60 h-60 mx-auto mb-6">
-                    <Image
-                      src={wedding.bride_img}
-                      alt={wedding.bride}
-                      fill
-                      className="object-cover rounded-full border-4 border-gold-200 shadow-md"
-                      sizes="(max-width: 768px) 100vw, 288px"
-                    />
-                  </div>
-                )}
-                <h3 className="text-2xl font-serif text-gold-700">{wedding.bride}</h3>
-                <p className="text-ivory-800 mt-2">{wedding.bride_name}</p>
-                {wedding.bride_desc && <p className="text-ivory-800 mt-4 leading-relaxed">{wedding.bride_desc}</p>}
-              </div>
+            <div className="flex flex-col items-center">
+              <span className="text-sm uppercase tracking-wider text-gold-600 font-medium bg-gold-100 px-3 py-1 rounded-full mb-2">Date</span>
+              <p className="text-ivory-800 text-2xl md:text-3xl font-semibold tracking-tight">{wedding.date}</p>
             </div>
-          </section>
+            <div className="flex flex-col items-center">
+              <span className="text-sm uppercase tracking-wider text-gold-600 font-medium bg-gold-100 px-3 py-1 rounded-full mb-2">Time</span>
+              <p className="text-ivory-800 text-xl md:text-2xl font-medium">{wedding.time.split(':').slice(0, 2).join(':')}</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-sm uppercase tracking-wider text-gold-600 font-medium bg-gold-100 px-3 py-1 rounded-full mb-2">Venue</span>
+              <p className="text-ivory-800 text-xl md:text-2xl font-medium leading-relaxed">{wedding.place}</p>
+            </div>
+          </div>
+        </section>
 
-          <section className="py-16 px-6 md:px-12 max-w-3xl mx-auto text-center bg-green-50" data-aos="fade-up" data-aos-delay="100">
-            <h2 className="text-3xl md:text-4xl font-serif text-gold-700 mb-6">Join Us</h2>
-            <p className="text-ivory-800 text-lg">{wedding.day}</p>
-            <p className="text-ivory-800 text-lg">{wedding.date}</p>
-            <p className="text-ivory-800 text-lg">{wedding.time}</p>
-            <p className="text-ivory-800 text-lg">{wedding.place}</p>
-          </section>
-
-          {moments.length > 0 && (
-            <section className="py-16 px-6 md:px-12 bg-ivory-100" data-aos="fade-in" data-aos-delay="100">
-              <h2 className="text-3xl md:text-4xl font-serif text-gold-700 text-center mb-8">Our Moments</h2>
-              <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                {moments.flatMap((moment) =>
-                  moment.moments_img.map((img, index) => (
-                    <div key={index} className="relative w-full h-80" data-aos="zoom-in" data-aos-delay={`${index * 100}`}>
-                      <Image
-                        src={img}
-                        alt={`Moment ${index + 1}`}
-                        fill
-                        className="object-cover rounded-lg shadow-md hover:scale-105 transition-transform duration-300 border-2 border-gold-100"
-                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
-                      />
-                    </div>
-                  ))
-                )}
-              </div>
-            </section>
-          )}
-
-          {gifts.length > 0 && (
-            <section className="py-16 px-6 md:px-12 max-w-3xl mx-auto text-center" data-aos="fade-up" data-aos-delay="100">
-              <h2 className="text-3xl md:text-4xl font-serif text-gold-700 mb-6">Gifts</h2>
-              <button
-                onClick={openGiftsPage}
-                className="bg-gold-500 text-ivory-50 font-medium p-4 rounded-lg hover:bg-gold-600 transition-colors duration-300 w-full max-w-xs shadow-md border border-gold-300 focus:outline-none focus:ring-2 focus:ring-green-300"
-              >
-                View Gifts
-              </button>
-            </section>
-          )}
-
-          <section className="py-16 px-6 md:px-12 max-w-3xl mx-auto bg-ivory-50" data-aos="fade-up" data-aos-delay="100">
-            <h2 className="text-3xl md:text-4xl font-serif text-gold-700 text-center mb-8">Blessings & Wishes</h2>
-            <form onSubmit={handleFormSubmit} className="space-y-6 mb-8">
-              <div data-aos="fade-up" data-aos-delay="200">
-                <label htmlFor="name" className="block text-ivory-800 font-medium mb-2">Your Name</label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="w-full p-3 border border-gold-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-300 bg-ivory-50"
-                  placeholder="Enter your name"
-                  maxLength={255}
-                />
-              </div>
-              <div data-aos="fade-up" data-aos-delay="300">
-                <label htmlFor="words" className="block text-ivory-800 font-medium mb-2">Your Message</label>
-                <textarea
-                  id="words"
-                  name="words"
-                  value={formData.words}
-                  onChange={handleInputChange}
-                  className="w-full p-3 border border-gold-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-300 bg-ivory-50"
-                  placeholder="Write your blessings and wishes"
-                  rows={5}
-                  maxLength={1000}
-                />
-              </div>
-              <div data-aos="fade-up" data-aos-delay="400">
-                <label htmlFor="presence" className="block text-ivory-800 font-medium mb-2">Attendance</label>
-                <select
-                  id="presence"
-                  name="presence"
-                  value={formData.presence}
-                  onChange={handleInputChange}
-                  className="w-full p-3 border border-gold-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-300 bg-ivory-50"
-                >
-                  <option value="present">Will Attend</option>
-                  <option value="not_present">Will Not Attend</option>
-                </select>
-              </div>
-              {formError && <p className="text-red-600">{formError}</p>}
-              <button
-                type="submit"
-                className="bg-black text-white p-3 rounded-lg hover:bg-black transition-colors duration-300 w-full"
-                data-aos="fade-up"
-                data-aos-delay="500"
-              >
-                Send Wishes
-              </button>
-            </form>
-
-            <div className="max-h-96 overflow-y-auto space-y-6">
-              {congrats.length > 0 ? (
-                congrats.map((congrat, index) => (
+        {moments.length > 0 && (
+          <section className="py-16 px-6 md:px-12 bg-ivory-100" data-aos="fade-in" data-aos-delay="100">
+            <h2 className="text-3xl md:text-4xl font-serif text-gold-700 text-center mb-8">Our Moments</h2>
+            <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 masonry-grid">
+              {moments.flatMap((moment) =>
+                moment.moments_img.map((img, index) => (
                   <div
                     key={index}
-                    className="p-6 bg-white rounded-lg shadow-md border-l-4 border-green-200"
-                    data-aos="fade-up"
+                    className="relative w-full masonry-item"
+                    data-aos="zoom-in"
                     data-aos-delay={`${index * 100}`}
                   >
-                    <p className="text-gold-700 font-medium"><b>{congrat.name}</b></p>
-                    <p className="text-ivory-800 mt-2">{congrat.words}</p>
-                    <p className="text-ivory-600 text-sm mt-2">
-                      {congrat.presence === 'present' ? 'Will Attend' : 'Will Not Attend'} •{' '}
-                      {new Date(congrat.created_at).toLocaleDateString()}
-                    </p>
+                    <Image
+                      src={img}
+                      alt={`Moment ${index + 1}`}
+                      width={0}
+                      height={0}
+                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                      className="w-full h-auto object-cover rounded-lg shadow-md hover:scale-[1.02] transition-transform duration-300 border-2 border-gold-100"
+                      style={{ aspectRatio: 'auto' }}
+                      onLoad={(e) => {
+                        const imgElement = e.target as HTMLImageElement;
+                        imgElement.style.aspectRatio = `${imgElement.naturalWidth}/${imgElement.naturalHeight}`;
+                      }}
+                    />
                   </div>
                 ))
-              ) : (
-                <p className="text-ivory-800 text-center">No wishes yet. Be the first to share your blessings!</p>
               )}
             </div>
           </section>
+        )}
 
-          <footer className="py-8 bg-green-50 text-center text-ivory-800 relative">
-            <div className="absolute bottom-0 left-0">
-              <Image
-                src="/images/footer.png"
-                alt="Footer Decoration"
-                width={150}
-                height={100}
-                className="object-contain"
+        {gifts.length > 0 && (
+          <section className="py-16 px-6 md:px-12 max-w-3xl mx-auto text-center" data-aos="fade-up" data-aos-delay="100">
+            <h2 className="text-3xl md:text-4xl font-serif text-gold-700 mb-6">Amplop Online</h2>
+            <button
+              onClick={toggleGiftsDropdown}
+              className={`bg-gold-500 text-ivory-50 font-medium p-4 rounded-lg hover:bg-gold-600 transition-colors duration-300 w-full max-w-xs shadow-md border border-gold-300 focus:outline-none focus:ring-2 focus:ring-green-300 ${showGiftsDropdown ? 'bg-gold-600' : ''
+                }`}
+            >
+              {showGiftsDropdown ? 'Tutup Amplop Online' : 'Buka Amplop Online'}
+            </button>
+            <div
+              className={`transition-all duration-500 ease-in-out overflow-hidden ${showGiftsDropdown ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
+                }`}
+            >
+              <div className="mt-6 space-y-4">
+                {gifts.length > 0 ? (
+                  gifts.map((gift, index) => (
+                    <div
+                      key={index}
+                      className="relative bg-gradient-to-r from-gray-800 to-gray-600 text-white rounded-lg shadow-lg p-6 w-full max-w-md mx-auto border border-gold-200 transform hover:scale-105 transition-transform duration-300"
+                      data-aos="fade-up"
+                      data-aos-delay={`${index * 100}`}
+                      style={{
+                        backgroundImage: 'linear-gradient(135deg, #2d3748 0%, #4a5568 100%)',
+                        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.2)',
+                      }}
+                    >
+                      <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-gold-500 to-gold-300"></div>
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold text-gold-300">Amplop Online</h3>
+                        <div className="text-xs text-gray-300 opacity-75">#{index + 1}</div>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">
+                          <span className="text-gold-200">Name:</span> {gift.envelope_name}
+                        </p>
+                        <p className="text-sm font-medium">
+                          <span className="text-gold-200">Number:</span> {gift.envelope_number}
+                        </p>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(gift.envelope_number)}
+                          className="mt-2 bg-gold-500 text-ivory-50 font-medium py-2 px-4 rounded-lg hover:bg-gold-600 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-green-300"
+                        >
+                          Copy Number
+                        </button>
+                      </div>
+                      <div className="absolute bottom-4 right-4 text-xs text-gray-400 opacity-50">
+                        Secure Transaction
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-ivory-800 text-center">No gift envelopes available.</p>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        <section className="py-16 px-6 md:px-12 max-w-3xl mx-auto bg-ivory-50">
+          <h2 className="text-3xl md:text-4xl font-serif text-gold-700 text-center mb-8">Blessings & Wishes</h2>
+          {/* Attendance Summary */}
+          <div className="flex justify-center gap-12 mb-8">
+            <div className="text-center">
+              <p className="text-4xl md:text-5xl font-serif text-green-300">{attendCount}</p>
+              <p className="text-lg md:text-xl font-serif text-ivory-800 mt-2">Will Attend</p>
+            </div>
+            <div className="text-center">
+              <p className="text-4xl md:text-5xl font-serif text-red-600">{notAttendCount}</p>
+              <p className="text-lg md:text-xl font-serif text-ivory-800 mt-2">Will Not Attend</p>
+            </div>
+          </div>
+          <form onSubmit={handleFormSubmit} className="space-y-6 mb-8">
+            <div>
+              <label htmlFor="name" className="block text-ivory-800 font-medium mb-2">Your Name</label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-gold-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-300 bg-ivory-50"
+                placeholder="Enter your name"
+                maxLength={255}
               />
             </div>
-            <p className="relative">Crafted with love for {wedding.groom_name} & {wedding.bride_name}</p>
-            <p className="relative mt-2 text-sm">Celebrate our union with joy and blessings</p>
-          </footer>
-        </>
-      )}
+            <div>
+              <label htmlFor="words" className="block text-ivory-800 font-medium mb-2">Your Message</label>
+              <textarea
+                id="words"
+                name="words"
+                value={formData.words}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-gold-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-300 bg-ivory-50"
+                placeholder="Write your blessings and wishes"
+                rows={5}
+                maxLength={1000}
+              />
+            </div>
+            <div>
+              <label htmlFor="presence" className="block text-ivory-800 font-medium mb-2">Attendance</label>
+              <select
+                id="presence"
+                name="presence"
+                value={formData.presence}
+                onChange={handleInputChange}
+                className="w-full p-3 border border-gold-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-300 bg-ivory-50"
+              >
+                <option value="present">Will Attend</option>
+                <option value="not_present">Will Not Attend</option>
+              </select>
+            </div>
+            {formError && <p className="text-red-600">{formError}</p>}
+            <button
+              type="submit"
+              className="bg-black text-white p-3 rounded-lg hover:bg-black transition-colors duration-300 w-full"
+            >
+              Send Wishes
+            </button>
+          </form>
+
+          <div className="max-h-96 overflow-y-auto space-y-6">
+            {congrats.length > 0 ? (
+              congrats.map((congrat, index) => (
+                <div
+                  key={index}
+                  className="p-6 bg-white rounded-lg shadow-md border-l-4 border-green-200"
+                >
+                  <p className="text-gold-700 font-medium"><b>{congrat.name}</b></p>
+                  <p className="text-ivory-800 mt-2">{congrat.words}</p>
+                  <p className="text-ivory-600 text-sm mt-2">
+                    {congrat.presence === 'present' ? 'Will Attend' : 'Will Not Attend'} •{' '}
+                    {new Date(congrat.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <p className="text-ivory-800 text-center">No wishes yet. Be the first to share your blessings!</p>
+            )}
+          </div>
+        </section>
+
+        <footer className="py-8 bg-green-50 text-center text-ivory-800 relative">
+          <div className="absolute bottom-0 left-0">
+            <Image
+              src="/images/footer.png"
+              alt="Footer Decoration"
+              width={150}
+              height={100}
+              className="object-contain"
+            />
+          </div>
+          <p className="relative">Crafted with love for {wedding.groom_name} & {wedding.bride_name}</p>
+          <p className="relative mt-2 text-sm">Celebrate our union with joy and blessings</p>
+        </footer>
+      </>
     </div>
   );
 }
