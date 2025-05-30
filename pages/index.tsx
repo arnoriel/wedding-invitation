@@ -367,24 +367,50 @@ export default function Wedding() {
           </div>
         </section>
 
-        <section className="py-16 px-6 md:px-12 max-w-4xl mx-auto text-center bg-gradient-to-br from-green-50 via-ivory-50 to-gold-50 rounded-xl" data-aos="fade-up" data-aos-delay="100">
-          <h2 className="text-3xl md:text-4xl font-serif text-gold-700 mb-10 font-extrabold tracking-tight drop-shadow-sm">We Warmly Invite You</h2>
-          <div className="grid grid-cols-1 gap-6 md:gap-8">
+        <section
+          className="py-8 px-6 max-h-[600px] w-[300px] sm:w-[350px] mx-auto text-center bg-gradient-to-br from-green-100 via-green-50 to-emerald-100 rounded-full flex flex-col justify-center aspect-[1/2.5]"
+          data-aos="fade-up"
+          data-aos-delay="100"
+        >
+          <h2 className="text-xl md:text-2xl font-serif text-emerald-800 mb-6 font-extrabold tracking-tight drop-shadow-sm">
+            We Warmly Invite You
+          </h2>
+          <div className="flex flex-col gap-5">
             <div className="flex flex-col items-center">
-              <span className="text-sm uppercase tracking-wider text-gold-600 font-medium bg-gold-100 px-3 py-1 rounded-full mb-2">Day</span>
-              <p className="text-ivory-800 text-xl md:text-2xl font-light italic">{wedding.day}</p>
+              <span className="text-[10px] uppercase tracking-wider text-emerald-700 font-medium bg-emerald-100 px-2 py-0.5 rounded-xl mb-1">
+                Hari
+              </span>
+              <p className="text-emerald-900 text-base font-light italic">{wedding.day}</p>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-sm uppercase tracking-wider text-gold-600 font-medium bg-gold-100 px-3 py-1 rounded-full mb-2">Date</span>
-              <p className="text-ivory-800 text-2xl md:text-3xl font-semibold tracking-tight">{wedding.date}</p>
+              <span className="text-[10px] uppercase tracking-wider text-emerald-700 font-medium bg-emerald-100 px-2 py-0.5 rounded-xl mb-1">
+                Tanggal
+              </span>
+              {(() => {
+                const [year, month, day] = wedding.date.split("-");
+                return (
+                  <div className="flex flex-col items-center leading-tight">
+                    <span className="text-4xl font-extrabold text-emerald-700">{day}</span>
+                    <span className="text-sm text-emerald-900 font-medium">{month}-{year}</span>
+                  </div>
+                );
+              })()}
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-sm uppercase tracking-wider text-gold-600 font-medium bg-gold-100 px-3 py-1 rounded-full mb-2">Time</span>
-              <p className="text-ivory-800 text-xl md:text-2xl font-medium">{wedding.time.split(':').slice(0, 2).join(':')}</p>
+              <span className="text-[10px] uppercase tracking-wider text-emerald-700 font-medium bg-emerald-100 px-2 py-0.5 rounded-xl mb-1">
+                Waktu
+              </span>
+              <p className="text-emerald-900 text-base font-medium">
+                {wedding.time.split(':').slice(0, 2).join(':')}
+              </p>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-sm uppercase tracking-wider text-gold-600 font-medium bg-gold-100 px-3 py-1 rounded-full mb-2">Venue</span>
-              <p className="text-ivory-800 text-xl md:text-2xl font-medium leading-relaxed">{wedding.place}</p>
+              <span className="text-[10px] uppercase tracking-wider text-emerald-700 font-medium bg-emerald-100 px-2 py-0.5 rounded-xl mb-1">
+                Tempat
+              </span>
+              <p className="text-emerald-900 text-base font-medium leading-relaxed text-center">
+                {wedding.place}
+              </p>
             </div>
           </div>
         </section>
@@ -423,13 +449,19 @@ export default function Wedding() {
 
         {gifts.length > 0 && (
           <section className="py-16 px-6 md:px-12 max-w-3xl mx-auto text-center" data-aos="fade-up" data-aos-delay="100">
-            <h2 className="text-3xl md:text-4xl font-serif text-gold-700 mb-6">Amplop Online</h2>
+            <Image
+              src="/images/amplop.png"
+              alt="Amplop Online"
+              width={200}
+              height={200}
+              className="mx-auto mb-6"
+            />
             <button
               onClick={toggleGiftsDropdown}
               className={`bg-gold-500 text-ivory-50 font-medium p-4 rounded-lg hover:bg-gold-600 transition-colors duration-300 w-full max-w-xs shadow-md border border-gold-300 focus:outline-none focus:ring-2 focus:ring-green-300 ${showGiftsDropdown ? 'bg-gold-600' : ''
                 }`}
             >
-              {showGiftsDropdown ? 'Tutup Amplop Online' : 'Buka Amplop Online'}
+              {showGiftsDropdown ? 'Amplop Online' : 'Amplop Online'}
             </button>
             <div
               className={`transition-all duration-500 ease-in-out overflow-hidden ${showGiftsDropdown ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
@@ -444,7 +476,7 @@ export default function Wedding() {
                       data-aos="fade-up"
                       data-aos-delay={`${index * 100}`}
                       style={{
-                        backgroundImage: 'linear-gradient(135deg, #2d3748 0%, #4a5568 100%)',
+                        backgroundImage: 'linear-gradient(135deg, #000000 0%, #4a5568 100%)',
                         boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.2)',
                       }}
                     >
