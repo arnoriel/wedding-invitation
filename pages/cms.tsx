@@ -392,7 +392,7 @@ export default function CMS() {
                 console.error('Invite insert error:', error);
                 throw error;
             }
-            setInvites([...invites, ...data]);
+            setInvites([...data, ...invites]);
             alert('Invite saved!');
             setNewInvite({ invited_name: '' });
         } catch (error) {
@@ -416,18 +416,64 @@ export default function CMS() {
         }
     };
 
+    const handleDeleteAllInvites = async () => {
+        if (!weddingId) {
+            alert('Please save wedding details first.');
+            return;
+        }
+        if (!confirm('Are you sure you want to delete all invites? This action cannot be undone.')) {
+            return;
+        }
+        try {
+            const { error, count } = await supabase
+                .from('invites')
+                .delete()
+                .eq('wedding_id', weddingId);
+            if (error) {
+                console.error('Error deleting all invites:', error);
+                throw error;
+            }
+            setInvites([]);
+            if (count === 0) {
+                alert('No invites found to delete.');
+            } else {
+                alert(`Successfully deleted ${count} invite(s)!`);
+            }
+        } catch (error) {
+            console.error('Error deleting all invites:', error);
+            alert('Failed to delete invites.');
+        }
+    };
+
     const generateShareLink = (invitedName: string) => {
-        const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+        const baseUrl = 'https://wedding-invitation-six-iota.vercel.app';
         const encodedName = encodeURIComponent(invitedName);
-        return `${baseUrl}?invited_name=${encodedName}`;
+        const link = `${baseUrl}?invited_name=${encodedName}`;
+        return `Assalamualaikum Warahmatullahi Wabarakatuh
+
+Tanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i ${invitedName} untuk menghadiri acara pernikahan putra/i kami yaitu ${wedding.groom_name} & ${wedding.bride_name}.
+
+Berikut link undangan kami, untuk info lengkap dari acara bisa kunjungi :
+
+${link}
+
+Merupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.
+
+Mohon maaf perihal undangan hanya di bagikan melalui pesan ini.
+
+Dan agar selalu menjaga kesehatan bersama serta datang pada waktu yang telah ditentukan.
+
+Terima kasih banyak atas perhatiannya.
+
+Wassalamualaikum Warahmatullahi Wabarakatuh`;
     };
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text).then(() => {
-            alert('Link copied to clipboard!');
+            alert('Invitation copied to clipboard!');
         }).catch((error) => {
             console.error('Error copying to clipboard:', error);
-            alert('Failed to copy link.');
+            alert('Failed to copy invitation.');
         });
     };
 
@@ -780,15 +826,25 @@ export default function CMS() {
                 <div className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100">
                     <h2 className="text-2xl font-semibold mb-6 text-rose-600">Invited Guests</h2>
                     <form onSubmit={handleInviteSubmit} className="mb-6 space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Invited Guest Name</label>
-                            <input
-                                type="text"
-                                value={newInvite.invited_name}
-                                onChange={(e) => setNewInvite({ ...newInvite, invited_name: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
-                                required
-                            />
+                        <div className="flex items-end space-x-4">
+                            <div className="flex-1">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Invited Guest Name</label>
+                                <input
+                                    type="text"
+                                    value={newInvite.invited_name}
+                                    onChange={(e) => setNewInvite({ ...newInvite, invited_name: e.target.value })}
+                                    className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                    required
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleDeleteAllInvites}
+                                className="bg-red-500 text-white py-3 px-6 rounded-lg hover:bg-red-600 transition-colors duration-300 font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                disabled={!weddingId}
+                            >
+                                Delete All Invites
+                            </button>
                         </div>
                         <button
                             type="submit"

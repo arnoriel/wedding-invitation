@@ -285,7 +285,7 @@ export default function Wedding({ wedding }: WeddingProps) {
               <p className="text-xl md:text-2xl text-white mb-4">Yang Terhormat, {invitedName}</p>
               <button
                 onClick={handleCloseModal}
-                className="bg-amber-500 text-white font-medium py-3 px-6 rounded-lg hover:bg-amber-600 transition-colors duration-300 shadow-md border border-white focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="bg-pink-300 text-white font-medium py-2 px-4 rounded-md hover:bg-pink-400 transition-colors duration-200 border border-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-300 text-sm"
               >
                 Buka Undangan
               </button>
@@ -390,7 +390,7 @@ export default function Wedding({ wedding }: WeddingProps) {
                 {wedding.groom_desc && <p className="text-neutral-800 mt-4 leading-relaxed">{wedding.groom_desc}</p>}
               </div>
               <div className="text-center md:absolute md:top-1/2 md:left-1/2 md:transform md:-translate-x-1/2 md:-translate-y-1/2" data-aos="fade-right" data-aos-delay="400">
-                <h3 className="text-2xl md:text-3xl text-amber-700">{wedding.groom_initial} & {wedding.bride_initial}</h3>
+                <h3 className="text-2xl md:text-3xl text-amber-700" style={{ fontFamily: "'Allura', cursive" }}>{wedding.groom_initial} & {wedding.bride_initial}</h3>
               </div>
               <div className="text-center" data-aos="fade-left" data-aos-delay="300">
                 <p className="text-2xl md:text-3xl text-amber-700 mb-2">Mempelai Wanita</p>
@@ -542,7 +542,7 @@ export default function Wedding({ wedding }: WeddingProps) {
             />
             <button
               onClick={toggleGiftsDropdown}
-              className={`bg-amber-500 text-neutral-50 text-sm font-medium px-3 py-2 rounded-md hover:bg-amber-600 transition-colors duration-300 shadow-sm border border-amber-300 focus:outline-none focus:ring-2 focus:ring-pink-300 ${showGiftsDropdown ? 'bg-amber-600' : ''}`}
+              className={`bg-pink-300 text-neutral-50 text-sm font-medium px-2 py-1 rounded-md hover:bg-pink-400 transition-colors duration-300 shadow-sm border border-amber-300 focus:outline-none focus:ring-2 focus:ring-pink-300 ${showGiftsDropdown ? 'bg-amber-600' : ''}`}
             >
               Amplop Digital
             </button>
@@ -576,7 +576,7 @@ export default function Wedding({ wedding }: WeddingProps) {
                         </p>
                         <button
                           onClick={() => navigator.clipboard.writeText(gift.envelope_number)}
-                          className="mt-2 bg-amber-500 text-neutral-50 font-medium py-2 px-4 rounded-lg hover:bg-amber-600 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-pink-300"
+                          className="mt-2 bg-pink-300 text-neutral-50 font-medium py-2 px-4 rounded-lg hover:bg-pink-400 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-pink-300"
                         >
                           Salin Nomor
                         </button>
