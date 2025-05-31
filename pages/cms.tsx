@@ -14,12 +14,14 @@ interface WeddingForm {
     bride_desc: string;
     groom_img: File | null | string;
     bride_img: File | null | string;
-    modal_img: File | null | string; // Tambah kolom untuk modal image
+    modal_img: File | null | string;
     description: string;
     place: string;
     date: string;
     day: string;
     time: string;
+    contract_time: string;
+    invite_desc: string;
 }
 
 interface Moment {
@@ -33,9 +35,18 @@ interface Gift {
     envelope_number: string;
 }
 
+interface Invite {
+    id: string;
+    invited_name: string;
+}
+
 interface NewGift {
     envelope_name: string;
     envelope_number: string;
+}
+
+interface NewInvite {
+    invited_name: string;
 }
 
 interface Asset {
@@ -56,17 +67,21 @@ export default function CMS() {
         bride_desc: '',
         groom_img: null,
         bride_img: null,
-        modal_img: null, // Tambah state untuk modal image
+        modal_img: null,
         description: '',
         place: '',
         date: '',
         day: '',
         time: '',
+        contract_time: '',
+        invite_desc: '',
     });
     const [moments, setMoments] = useState<Moment[]>([]);
     const [newMoments, setNewMoments] = useState<{ moments_img: File[] }>({ moments_img: [] });
     const [gifts, setGifts] = useState<Gift[]>([]);
     const [newGift, setNewGift] = useState<NewGift>({ envelope_name: '', envelope_number: '' });
+    const [invites, setInvites] = useState<Invite[]>([]);
+    const [newInvite, setNewInvite] = useState<NewInvite>({ invited_name: '' });
     const [asset, setAsset] = useState<Asset>({ id: undefined, music: null, music_url: null });
     const [weddingId, setWeddingId] = useState<string | null>(null);
 
@@ -84,7 +99,7 @@ export default function CMS() {
                         ...weddingData,
                         groom_img: weddingData.groom_img || null,
                         bride_img: weddingData.bride_img || null,
-                        modal_img: weddingData.modal_img || null, // Pastikan default null jika kolom tidak ada
+                        modal_img: weddingData.modal_img || null,
                         groom_initial: weddingData.groom_initial || '',
                         bride_initial: weddingData.bride_initial || '',
                     });
@@ -105,6 +120,13 @@ export default function CMS() {
                         .eq('wedding_id', weddingData.id);
                     if (giftsError) throw giftsError;
                     setGifts(giftsData || []);
+
+                    const { data: invitesData, error: invitesError } = await supabase
+                        .from('invites')
+                        .select('id, invited_name')
+                        .eq('wedding_id', weddingData.id);
+                    if (invitesError) throw invitesError;
+                    setInvites(invitesData || []);
 
                     const { data: assetData, error: assetError } = await supabase
                         .from('assets')
@@ -128,7 +150,7 @@ export default function CMS() {
         try {
             let groomImgUrl = typeof wedding.groom_img === 'string' ? wedding.groom_img : wedding.groom;
             let brideImgUrl = typeof wedding.bride_img === 'string' ? wedding.bride_img : wedding.bride;
-            let modalImgUrl = typeof wedding.modal_img === 'string' ? wedding.modal_img : null; // Inisialisasi modal_img
+            let modalImgUrl = typeof wedding.modal_img === 'string' ? wedding.modal_img : null;
 
             if (wedding.groom_img instanceof File) {
                 const { data, error } = await supabase.storage
@@ -184,12 +206,14 @@ export default function CMS() {
                         bride_desc: wedding.bride_desc,
                         groom_img: groomImgUrl,
                         bride_img: brideImgUrl,
-                        modal_img: modalImgUrl, // Update modal_img
+                        modal_img: modalImgUrl,
                         description: wedding.description,
                         place: wedding.place,
                         date: wedding.date,
                         day: wedding.day,
                         time: wedding.time,
+                        contract_time: wedding.contract_time,
+                        invite_desc: wedding.invite_desc,
                     })
                     .eq('id', weddingId);
                 if (error) {
@@ -211,12 +235,14 @@ export default function CMS() {
                         bride_desc: wedding.bride_desc,
                         groom_img: groomImgUrl,
                         bride_img: brideImgUrl,
-                        modal_img: modalImgUrl, // Insert modal_img
+                        modal_img: modalImgUrl,
                         description: wedding.description,
                         place: wedding.place,
                         date: wedding.date,
                         day: wedding.day,
                         time: wedding.time,
+                        contract_time: wedding.contract_time,
+                        invite_desc: wedding.invite_desc,
                     })
                     .select()
                     .single();
@@ -231,7 +257,7 @@ export default function CMS() {
                 ...wedding,
                 groom_img: groomImgUrl,
                 bride_img: brideImgUrl,
-                modal_img: modalImgUrl, // Update state dengan URL modal_img
+                modal_img: modalImgUrl,
             });
         } catch (error) {
             console.error('Error saving wedding:', error);
@@ -346,6 +372,63 @@ export default function CMS() {
             console.error('Error deleting gift:', error);
             alert('Failed to delete gift.');
         }
+    };
+
+    const handleInviteSubmit = async (e: FormEvent) => {
+        e.preventDefault();
+        if (!weddingId) {
+            alert('Please save wedding details first.');
+            return;
+        }
+        try {
+            const { data, error } = await supabase
+                .from('invites')
+                .insert({
+                    wedding_id: weddingId,
+                    invited_name: newInvite.invited_name,
+                })
+                .select();
+            if (error) {
+                console.error('Invite insert error:', error);
+                throw error;
+            }
+            setInvites([...invites, ...data]);
+            alert('Invite saved!');
+            setNewInvite({ invited_name: '' });
+        } catch (error) {
+            console.error('Error saving invite:', error);
+            alert('Failed to save invite.');
+        }
+    };
+
+    const handleDeleteInvite = async (inviteId: string) => {
+        try {
+            const { error } = await supabase.from('invites').delete().eq('id', inviteId);
+            if (error) {
+                console.error('Error deleting invite:', error);
+                throw error;
+            }
+            setInvites(invites.filter((invite) => invite.id !== inviteId));
+            alert('Invite deleted!');
+        } catch (error) {
+            console.error('Error deleting invite:', error);
+            alert('Failed to delete invite.');
+        }
+    };
+
+    const generateShareLink = (invitedName: string) => {
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+        const encodedName = encodeURIComponent(invitedName);
+        return `${baseUrl}?invited_name=${encodedName}`;
+    };
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Link copied to clipboard!');
+        }).catch((error) => {
+            console.error('Error copying to clipboard:', error);
+            alert('Failed to copy link.');
+        });
     };
 
     const handleAssetSubmit = async (e: FormEvent) => {
@@ -656,13 +739,32 @@ export default function CMS() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Waktu</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Waktu Presepsi</label>
                             <input
                                 type="time"
                                 value={wedding.time}
                                 onChange={(e) => setWedding({ ...wedding, time: e.target.value })}
                                 className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Waktu Akad</label>
+                            <input
+                                type="time"
+                                value={wedding.contract_time}
+                                onChange={(e) => setWedding({ ...wedding, contract_time: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Ucapan Undangan</label>
+                            <textarea
+                                value={wedding.invite_desc}
+                                onChange={(e) => setWedding({ ...wedding, invite_desc: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                rows={4}
                             />
                         </div>
                     </div>
@@ -673,6 +775,59 @@ export default function CMS() {
                         {weddingId ? 'Update Wedding Details' : 'Save Wedding Details'}
                     </button>
                 </form>
+
+                {/* Invites Section */}
+                <div className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100">
+                    <h2 className="text-2xl font-semibold mb-6 text-rose-600">Invited Guests</h2>
+                    <form onSubmit={handleInviteSubmit} className="mb-6 space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Invited Guest Name</label>
+                            <input
+                                type="text"
+                                value={newInvite.invited_name}
+                                onChange={(e) => setNewInvite({ ...newInvite, invited_name: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                required
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            className="w-full bg-rose-500 text-white py-3 rounded-lg hover:bg-rose-600 transition-colors duration-300 font-medium"
+                        >
+                            Add Invite
+                        </button>
+                    </form>
+                    {invites.length > 0 ? (
+                        <div className="space-y-4">
+                            {invites.map((invite) => (
+                                <div
+                                    key={invite.id}
+                                    className="p-4 bg-rose-50 rounded-lg shadow-sm border-l-4 border-rose-300 flex justify-between items-center transition-transform duration-300 hover:shadow-md"
+                                >
+                                    <div>
+                                        <p className="text-gray-700 font-medium">{invite.invited_name}</p>
+                                    </div>
+                                    <div className="flex space-x-2">
+                                        <button
+                                            onClick={() => copyToClipboard(generateShareLink(invite.invited_name))}
+                                            className="bg-amber-500 text-white py-2 px-4 rounded-lg hover:bg-amber-600 transition-colors duration-300"
+                                        >
+                                            Copy Share Link
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteInvite(invite.id)}
+                                            className="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors duration-300"
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-gray-500 italic">No invites added yet.</p>
+                    )}
+                </div>
 
                 {/* Moments Section */}
                 <div className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100">

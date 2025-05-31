@@ -22,17 +22,17 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-  background-image: url('/images/background.jpg'); /* Path to the image */
-  background-size: cover; /* Ensures the image covers the entire viewport */
-  background-position: center; /* Centers the image */
-  background-attachment: fixed; /* Keeps the background fixed during scroll */
-  background-repeat: no-repeat; /* Prevents tiling */
-  min-height: 100vh; /* Ensures the body covers the full viewport height */
-  -webkit-user-select: none; /* Safari */
-  -moz-user-select: none; /* Firefox */
-  -ms-user-select: none; /* Internet Explorer/Edge */
-  user-select: none; /* Standard */
+  font-family: "Times New Roman", Times, serif; /* Diubah ke Times New Roman */
+  background-image: url('/images/background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  min-height: 100vh;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .no-select {
