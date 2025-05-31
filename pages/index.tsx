@@ -535,14 +535,14 @@ export default function Wedding({ wedding }: WeddingProps) {
             <Image
               src="/images/amplop.png"
               alt="Amplop Digital"
-              width={150}
-              height={150}
+              width={30}
+              height={20}
               className="mx-auto mb-6"
               style={{ width: 'auto', height: 'auto' }}
             />
             <button
               onClick={toggleGiftsDropdown}
-              className={`bg-pink-300 text-neutral-50 text-sm font-medium px-2 py-1 rounded-md hover:bg-pink-400 transition-colors duration-300 shadow-sm border border-amber-300 focus:outline-none focus:ring-2 focus:ring-pink-300 ${showGiftsDropdown ? 'bg-amber-600' : ''}`}
+              className={`bg-pink-300 text-neutral-50 text-sm font-samll px-2 py-1 rounded-md hover:bg-pink-400 transition-colors duration-300 shadow-sm border border-amber-300 focus:outline-none focus:ring-2 focus:ring-pink-300 ${showGiftsDropdown ? 'bg-amber-600' : ''}`}
             >
               Amplop Digital
             </button>
