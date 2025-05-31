@@ -1,24 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import Image from 'next/image';
-import Head from 'next/head'; // Import Head from next/head
+import Head from 'next/head';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
+import { useRouter } from 'next/router';
+import { GetServerSidePropsContext } from 'next';
 
-// SpeakerWaveIcon and SpeakerXMarkIcon remain unchanged
-const SpeakerWaveIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
-  </svg>
-);
-
-const SpeakerXMarkIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l-2.25 2.25M19.5 12H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51z" />
-  </svg>
-);
-
-// Interfaces remain unchanged
+// Interfaces (unchanged)
 interface Wedding {
   id: string;
   groom: string;
@@ -62,9 +51,27 @@ interface Asset {
   music: string;
 }
 
-export default function Wedding() {
-  // State, hooks, and logic remain unchanged
-  const [wedding, setWedding] = useState<Wedding | null>(null);
+// Props interface for the component
+interface WeddingProps {
+  wedding: Wedding | null;
+}
+
+// SpeakerWaveIcon and SpeakerXMarkIcon (unchanged)
+const SpeakerWaveIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+  </svg>
+);
+
+const SpeakerXMarkIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l-2.25 2.25M19.5 12H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51z" />
+  </svg>
+);
+
+export default function Wedding({ wedding }: WeddingProps) {
+  const router = useRouter();
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://yourdomain.com';
   const [moments, setMoments] = useState<Moment[]>([]);
   const [gifts, setGifts] = useState<Gift[]>([]);
   const [congrats, setCongrats] = useState<Congrats[]>([]);
@@ -101,33 +108,26 @@ export default function Wedding() {
 
   useEffect(() => {
     async function fetchData() {
+      if (!wedding?.id) return; // Skip fetching if wedding is null
       try {
-        const { data: weddingData, error: weddingError } = await supabase
-          .from('wedding')
-          .select('*')
-          .limit(1)
-          .single();
-        if (weddingError) throw weddingError;
-        setWedding(weddingData);
-
         const { data: momentsData, error: momentsError } = await supabase
           .from('moments')
           .select('moments_img')
-          .eq('wedding_id', weddingData.id);
+          .eq('wedding_id', wedding.id);
         if (momentsError) throw momentsError;
         setMoments(momentsData);
 
         const { data: giftsData, error: giftsError } = await supabase
           .from('gifts')
           .select('envelope_name, envelope_number')
-          .eq('wedding_id', weddingData.id);
+          .eq('wedding_id', wedding.id);
         if (giftsError) throw giftsError;
         setGifts(giftsData);
 
         const { data: congratsData, error: congratsError } = await supabase
           .from('congrats')
           .select('id, name, words, presence, created_at')
-          .eq('wedding_id', weddingData.id)
+          .eq('wedding_id', wedding.id)
           .order('created_at', { ascending: false });
         if (congratsError) throw congratsError;
         setCongrats(congratsData);
@@ -135,7 +135,7 @@ export default function Wedding() {
         const { data: assetsData, error: assetsError } = await supabase
           .from('assets')
           .select('music')
-          .eq('wedding_id', weddingData.id)
+          .eq('wedding_id', wedding.id)
           .limit(1)
           .single();
         if (assetsError && !assetsError.message.includes('No rows found')) throw assetsError;
@@ -145,7 +145,7 @@ export default function Wedding() {
       }
     }
     fetchData();
-  }, []);
+  }, [wedding]);
 
   const toggleAudio = () => {
     if (audioRef.current) {
@@ -192,7 +192,7 @@ export default function Wedding() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    if (name !== 'name') { // Prevent changes to name field
+    if (name !== 'name') {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
@@ -221,19 +221,38 @@ export default function Wedding() {
 
   return (
     <div className="min-h-screen relative overflow-x-hidden no-select">
-      {/* Add dynamic title and Open Graph meta tags */}
       <Head>
-        <title>The Wedding of {wedding.groom_name} & {wedding.bride_name}</title>
+        <title>{`The Wedding of ${wedding.groom_name} & ${wedding.bride_name}`}</title>
         <meta name="description" content={wedding.description || "Undangan pernikahan digital untuk merayakan cinta kami."} />
-        {/* Open Graph meta tags for WhatsApp link preview */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={`${baseUrl}${router.asPath}`} />
         <meta property="og:title" content={`The Wedding of ${wedding.groom_name} & ${wedding.bride_name}`} />
         <meta property="og:description" content={wedding.description || "Join us in celebrating our special day!"} />
-        <meta property="og:image" content={wedding.modal_img || 'https://images.unsplash.com/photo-1629129836873-0d3db7a49b8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80'} />
-        <meta property="og:image:alt" content="Wedding invitation image" />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={typeof window !== 'undefined' ? window.location.href : ''} />
+        <meta
+          property="og:image"
+          content={
+            wedding.modal_img
+              ? (wedding.modal_img.startsWith('http') ? wedding.modal_img : `${baseUrl}${wedding.modal_img}`)
+              : 'https://images.unsplash.com/photo-1629129836873-0d3db7a49b8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80'
+          }
+        />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:site_name" content="Wedding Invitation" />
+        <meta property="og:image:alt" content={`Wedding invitation for ${wedding.groom_name} & ${wedding.bride_name}`} />
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content={`${baseUrl}${router.asPath}`} />
+        <meta property="twitter:title" content={`The Wedding of ${wedding.groom_name} & ${wedding.bride_name}`} />
+        <meta property="twitter:description" content={wedding.description || "Join us in celebrating our special day!"} />
+        <meta
+          property="twitter:image"
+          content={
+            wedding.modal_img
+              ? (wedding.modal_img.startsWith('http') ? wedding.modal_img : `${baseUrl}${wedding.modal_img}`)
+              : 'https://images.unsplash.com/photo-1629129836873-0d3db7a49b8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80'
+          }
+        />
       </Head>
-
       {/* Bagian modal selamat datang: Menampilkan undangan pernikahan dengan nama mempelai dan tombol untuk masuk ke situs */}
       {showModal && (
         <div className="fixed inset-0 bg-neutral-900 bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm">
@@ -283,6 +302,7 @@ export default function Wedding() {
           width={150}
           height={150}
           className="object-contain"
+          style={{ width: 'auto', height: 'auto' }}
         />
       </div>
 
@@ -346,6 +366,7 @@ export default function Wedding() {
                       width={80}
                       height={80}
                       className="absolute bottom-0 right-0 z-20"
+                      style={{ width: 'auto', height: 'auto' }}
                     />
                     <Image
                       src="/images/border-top.png"
@@ -353,6 +374,7 @@ export default function Wedding() {
                       width={80}
                       height={80}
                       className="absolute top-0 left-0 z-0"
+                      style={{ width: 'auto', height: 'auto' }}
                     />
                     <Image
                       src={wedding.groom_img}
@@ -380,6 +402,7 @@ export default function Wedding() {
                       width={80}
                       height={80}
                       className="absolute bottom-0 right-0 z-20"
+                      style={{ width: 'auto', height: 'auto' }}
                     />
                     <Image
                       src="/images/border-top.png"
@@ -387,6 +410,7 @@ export default function Wedding() {
                       width={80}
                       height={80}
                       className="absolute top-0 left-0 z-0"
+                      style={{ width: 'auto', height: 'auto' }}
                     />
                     <Image
                       src={wedding.bride_img}
@@ -481,26 +505,22 @@ export default function Wedding() {
           <section className="py-16 px-6 md:px-12 bg-transparent" data-aos="fade-in" data-aos-delay="100">
             <h2 className="text-3xl md:text-4xl text-amber-700 text-center mb-8">Momen Kami</h2>
             <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 masonry-grid">
-              {moments.flatMap((moment) =>
-                moment.moments_img.map((img, index) => (
+              {moments.flatMap((moment, momentIndex) =>
+                moment.moments_img.map((img, imgIndex) => (
                   <div
-                    key={index}
+                    key={`${momentIndex}-${imgIndex}`}
                     className="relative w-full masonry-item"
                     data-aos="zoom-in"
-                    data-aos-delay={`${index * 100}`}
+                    data-aos-delay={`${(momentIndex * moment.moments_img.length + imgIndex) * 100}`}
                   >
                     <Image
                       src={img}
-                      alt={`Momen ${index + 1}`}
+                      alt={`Momen ${momentIndex + 1}-${imgIndex + 1}`}
                       width={0}
                       height={0}
                       sizes="(max-width: 640px) 50vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                       className="w-full h-auto object-cover rounded-lg shadow-md hover:scale-[1.02] transition-transform duration-300 border-2 border-amber-100"
-                      style={{ aspectRatio: 'auto' }}
-                      onLoad={(e) => {
-                        const imgElement = e.target as HTMLImageElement;
-                        imgElement.style.aspectRatio = `${imgElement.naturalWidth}/${imgElement.naturalHeight}`;
-                      }}
+                      style={{ width: 'auto', height: 'auto' }}
                     />
                   </div>
                 ))
@@ -518,6 +538,7 @@ export default function Wedding() {
               width={150}
               height={150}
               className="mx-auto mb-6"
+              style={{ width: 'auto', height: 'auto' }}
             />
             <button
               onClick={toggleGiftsDropdown}
@@ -661,9 +682,10 @@ export default function Wedding() {
             <Image
               src="/images/footer.png"
               alt="Dekorasi Penutup"
-              width={150}
-              height={100}
+              width={150} // Ensure width matches the intended display size
+              height={100} // Ensure height matches the intended display size
               className="object-contain"
+              style={{ width: 'auto', height: 'auto' }} // Maintain aspect ratio
             />
           </div>
           <p className="relative">Dibuat dengan cinta untuk {wedding.groom_name} & {wedding.bride_name}</p>
@@ -672,4 +694,24 @@ export default function Wedding() {
       </>
     </div>
   );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function getServerSideProps(context: GetServerSidePropsContext): Promise<{ props: WeddingProps }> {
+  const { data: weddingData, error: weddingError } = await supabase
+    .from('wedding')
+    .select('*')
+    .limit(1)
+    .single();
+
+  if (weddingError) {
+    console.error('Error fetching wedding data:', weddingError);
+    return { props: { wedding: null } };
+  }
+
+  return {
+    props: {
+      wedding: weddingData,
+    },
+  };
 }
