@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import Image from 'next/image';
+import Head from 'next/head'; // Import Head from next/head
 import AOS from 'aos';
 import 'aos/dist/aos.css';
 
@@ -220,6 +221,19 @@ export default function Wedding() {
 
   return (
     <div className="min-h-screen relative overflow-x-hidden no-select">
+      {/* Add dynamic title and Open Graph meta tags */}
+      <Head>
+        <title>The Wedding of {wedding.groom_name} & {wedding.bride_name}</title>
+        <meta name="description" content={wedding.description || "Undangan pernikahan digital untuk merayakan cinta kami."} />
+        {/* Open Graph meta tags for WhatsApp link preview */}
+        <meta property="og:title" content={`The Wedding of ${wedding.groom_name} & ${wedding.bride_name}`} />
+        <meta property="og:description" content={wedding.description || "Join us in celebrating our special day!"} />
+        <meta property="og:image" content={wedding.modal_img || 'https://images.unsplash.com/photo-1629129836873-0d3db7a49b8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80'} />
+        <meta property="og:image:alt" content="Wedding invitation image" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={typeof window !== 'undefined' ? window.location.href : ''} />
+      </Head>
+
       {/* Bagian modal selamat datang: Menampilkan undangan pernikahan dengan nama mempelai dan tombol untuk masuk ke situs */}
       {showModal && (
         <div className="fixed inset-0 bg-neutral-900 bg-opacity-60 flex items-center justify-center z-50 backdrop-blur-sm">
@@ -254,7 +268,7 @@ export default function Wedding() {
                 onClick={handleCloseModal}
                 className="bg-amber-500 text-white font-medium py-3 px-6 rounded-lg hover:bg-amber-600 transition-colors duration-300 shadow-md border border-white focus:outline-none focus:ring-2 focus:ring-pink-300"
               >
-                Masuk Situs
+                Buka Undangan
               </button>
             </div>
           </div>
@@ -278,6 +292,7 @@ export default function Wedding() {
         </audio>
       )}
 
+      {/* Rest of your JSX remains unchanged */}
       <>
         {asset?.music && (
           <button
@@ -288,7 +303,7 @@ export default function Wedding() {
           </button>
         )}
 
-        {/* Bagian undangan: Menyapa tamu dengan informasi utama tentang pernikahan mempelai */}
+        {/* Bagian undangan */}
         <section
           className="flex flex-col items-center justify-center py-24 bg-cover bg-center relative min-h-[400px]"
           style={{
@@ -299,7 +314,7 @@ export default function Wedding() {
         >
           <div className="absolute inset-0 bg-transparent"></div>
           <div className="relative z-10 text-center px-4" data-aos="fade-up" data-aos-delay="200">
-            <h5 className="text-lg md:text-xl  text-amber-700 mb-4">
+            <h5 className="text-lg md:text-xl text-amber-700 mb-4">
               Undangan Pernikahan
             </h5>
             <h2
@@ -314,15 +329,15 @@ export default function Wedding() {
           </div>
         </section>
 
-        {/* Bagian mempelai: Memperkenalkan mempelai pria dan wanita beserta informasi singkat tentang mereka */}
+        {/* Bagian mempelai */}
         <section className="py-16 px-6 md:px-12 bg-transparent">
           <section className="py-16 px-6 md:px-12 max-w-3xl mx-auto text-center bg-transparent" data-aos="fade-up" data-aos-delay="100">
-            <h2 className="text-3xl md:text-4xl  text-amber-700 mb-6">Mempelai Kami</h2>
+            <h2 className="text-3xl md:text-4xl text-amber-700 mb-6">Mempelai Kami</h2>
           </section>
           <div className="max-w-4xl mx-auto relative">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
               <div className="text-center" data-aos="fade-right" data-aos-delay="200">
-                <p className="text-2xl md:text-3xl  text-amber-700 mb-2">Mempelai Pria</p>
+                <p className="text-2xl md:text-3xl text-amber-700 mb-2">Mempelai Pria</p>
                 {wedding.groom_img && (
                   <div className="relative w-60 h-60 mx-auto mb-6">
                     <Image
@@ -348,15 +363,15 @@ export default function Wedding() {
                     />
                   </div>
                 )}
-                <h3 className="text-2xl  text-amber-700">{wedding.groom}</h3>
+                <h3 className="text-2xl text-amber-700">{wedding.groom}</h3>
                 <p className="text-neutral-800 mt-2">{wedding.groom_name}</p>
                 {wedding.groom_desc && <p className="text-neutral-800 mt-4 leading-relaxed">{wedding.groom_desc}</p>}
               </div>
               <div className="text-center md:absolute md:top-1/2 md:left-1/2 md:transform md:-translate-x-1/2 md:-translate-y-1/2" data-aos="fade-right" data-aos-delay="400">
-                <h3 className="text-2xl md:text-3xl  text-amber-700">{wedding.groom_initial} & {wedding.bride_initial}</h3>
+                <h3 className="text-2xl md:text-3xl text-amber-700">{wedding.groom_initial} & {wedding.bride_initial}</h3>
               </div>
               <div className="text-center" data-aos="fade-left" data-aos-delay="300">
-                <p className="text-2xl md:text-3xl  text-amber-700 mb-2">Mempelai Wanita</p>
+                <p className="text-2xl md:text-3xl text-amber-700 mb-2">Mempelai Wanita</p>
                 {wedding.bride_img && (
                   <div className="relative w-60 h-60 mx-auto mb-6">
                     <Image
@@ -382,7 +397,7 @@ export default function Wedding() {
                     />
                   </div>
                 )}
-                <h3 className="text-2xl  text-amber-700">{wedding.bride}</h3>
+                <h3 className="text-2xl text-amber-700">{wedding.bride}</h3>
                 <p className="text-neutral-800 mt-2">{wedding.bride_name}</p>
                 {wedding.bride_desc && <p className="text-neutral-800 mt-4 leading-relaxed">{wedding.bride_desc}</p>}
               </div>
@@ -390,18 +405,17 @@ export default function Wedding() {
           </div>
         </section>
 
-        {/* Bagian acara: Menyediakan informasi tentang tanggal, waktu, dan lokasi acara pernikahan */}
+        {/* Bagian acara */}
         <section
           className="relative py-12 px-6 w-[280px] sm:w-[350px] mx-auto text-center bg-gradient-to-br from-pink-100 via-pink-50 to-rose-100 rounded-full overflow-hidden flex flex-col items-center justify-start"
           data-aos="fade-up"
           data-aos-delay="100"
         >
-          <h2 className="text-sm md:text-base  text-rose-800 mb-6 mt-2 font-semibold tracking-tight drop-shadow-sm">
+          <h2 className="text-sm md:text-base text-rose-800 mb-6 mt-2 font-semibold tracking-tight drop-shadow-sm">
             Yang Akan Diselenggarakan
           </h2>
 
           <div className="w-full flex items-stretch justify-center gap-4 mt-2">
-            {/* Kolom kiri (tanggal) */}
             <div className="flex-1 flex flex-col items-center justify-center self-stretch">
               {wedding?.date ? (
                 (() => {
@@ -423,12 +437,9 @@ export default function Wedding() {
               )}
             </div>
 
-            {/* Garis tengah */}
             <div className="w-[2px] bg-rose-500 opacity-50 rounded-full self-stretch"></div>
 
-            {/* Kolom kanan (info acara) */}
             <div className="flex-1 flex flex-col gap-3 items-start justify-center text-xs w-full">
-              {/* Waktu Akad */}
               <div className="flex flex-col w-full border-b border-rose-300 pb-2">
                 <span className="uppercase tracking-wider text-rose-700 font-medium text-[10px] text-left">
                   Waktu Akad
@@ -438,7 +449,6 @@ export default function Wedding() {
                 </p>
               </div>
 
-              {/* Waktu Resepsi */}
               <div className="flex flex-col w-full border-b border-rose-300 pb-2 text-left">
                 <span className="uppercase tracking-wider text-rose-700 font-medium text-[10px]">
                   Waktu Resepsi
@@ -448,7 +458,6 @@ export default function Wedding() {
                 </p>
               </div>
 
-              {/* Tempat */}
               <div className="flex flex-col w-full border-b border-rose-300 pb-2 text-left">
                 <span className="uppercase tracking-wider text-rose-700 font-medium text-[10px]">
                   Tempat
@@ -462,12 +471,12 @@ export default function Wedding() {
 
           <br />
 
-          <h2 className="text-sm md:text-base  text-rose-800 font-semibold tracking-tight drop-shadow-sm">
+          <h2 className="text-sm md:text-base text-rose-800 font-semibold tracking-tight drop-shadow-sm">
             {wedding.invite_desc}
           </h2>
         </section>
 
-        {/* Bagian momen: Menampilkan galeri foto yang mengabadikan momen spesial pasangan */}
+        {/* Bagian momen */}
         {moments.length > 0 && (
           <section className="py-16 px-6 md:px-12 bg-transparent" data-aos="fade-in" data-aos-delay="100">
             <h2 className="text-3xl md:text-4xl text-amber-700 text-center mb-8">Momen Kami</h2>
@@ -500,7 +509,7 @@ export default function Wedding() {
           </section>
         )}
 
-        {/* Bagian hadiah: Menyediakan informasi untuk mengirimkan hadiah pernikahan secara digital */}
+        {/* Bagian hadiah */}
         {gifts.length > 0 && (
           <section className="py-16 px-6 md:px-12 max-w-3xl mx-auto text-center" data-aos="fade-up" data-aos-delay="100">
             <Image
@@ -564,9 +573,9 @@ export default function Wedding() {
           </section>
         )}
 
-        {/* Bagian ucapan: Memungkinkan tamu untuk mengirimkan ucapan selamat dan melihat daftar ucapan dari tamu lain */}
+        {/* Bagian ucapan */}
         <section className="py-16 px-6 md:px-12 max-w-3xl mx-auto bg-neutral-50">
-          <h2 className="text-3xl md:text-4xl  text-amber-700 text-center mb-8">Ucapan & Doa</h2>
+          <h2 className="text-3xl md:text-4xl text-amber-700 text-center mb-8">Ucapan & Doa</h2>
           <div className="flex justify-center gap-12 mb-8">
             <div className="text-center">
               <p className="text-4xl md:text-5xl text-pink-300">{attendCount}</p>
@@ -646,7 +655,7 @@ export default function Wedding() {
           </div>
         </section>
 
-        {/* Bagian penutup: Mengakhiri situs dengan pesan cinta dan dekorasi untuk suasana perayaan */}
+        {/* Bagian penutup */}
         <footer className="py-8 bg-pink-50 text-center text-neutral-800 relative">
           <div className="absolute bottom-0 left-0">
             <Image
