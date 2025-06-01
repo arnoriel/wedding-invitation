@@ -1,6 +1,9 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import Image from 'next/image';
+import Link from 'next/link';
+import ReactCrop, { Crop, PixelCrop } from 'react-image-crop'; // Import react-image-crop
+import 'react-image-crop/dist/ReactCrop.css'; // Import cropper styles
 
 interface WeddingForm {
     id?: string;
@@ -36,25 +39,16 @@ interface Gift {
     rek_name: string;
 }
 
-interface Invite {
-    id: string;
-    invited_name: string;
+interface Asset {
+    id?: string;
+    music: File | null;
+    music_url: string | null;
 }
 
 interface NewGift {
     envelope_name: string;
     envelope_number: string;
     rek_name: string;
-}
-
-interface NewInvite {
-    invited_name: string;
-}
-
-interface Asset {
-    id?: string;
-    music: File | null;
-    music_url: string | null;
 }
 
 export default function CMS() {
@@ -82,10 +76,16 @@ export default function CMS() {
     const [newMoments, setNewMoments] = useState<{ moments_img: File[] }>({ moments_img: [] });
     const [gifts, setGifts] = useState<Gift[]>([]);
     const [newGift, setNewGift] = useState<NewGift>({ envelope_name: '', envelope_number: '', rek_name: '' });
-    const [invites, setInvites] = useState<Invite[]>([]);
-    const [newInvite, setNewInvite] = useState<NewInvite>({ invited_name: '' });
     const [asset, setAsset] = useState<Asset>({ id: undefined, music: null, music_url: null });
     const [weddingId, setWeddingId] = useState<string | null>(null);
+
+    // Cropper state
+    const [crop, setCrop] = useState<Crop>({ unit: '%', x: 25, y: 25, width: 50, height: 50 });
+    const [croppedImage, setCroppedImage] = useState<Blob | null>(null);
+    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+    const [cropField, setCropField] = useState<'groom_img' | 'bride_img' | null>(null);
+    const imageRef = useRef<HTMLImageElement | null>(null);
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
     useEffect(() => {
         async function fetchData() {
@@ -123,13 +123,6 @@ export default function CMS() {
                     if (giftsError) throw giftsError;
                     setGifts(giftsData || []);
 
-                    const { data: invitesData, error: invitesError } = await supabase
-                        .from('invites')
-                        .select('id, invited_name')
-                        .eq('wedding_id', weddingData.id);
-                    if (invitesError) throw invitesError;
-                    setInvites(invitesData || []);
-
                     const { data: assetData, error: assetError } = await supabase
                         .from('assets')
                         .select('id, music')
@@ -146,6 +139,76 @@ export default function CMS() {
         }
         fetchData();
     }, []);
+
+    // Function to handle cropping and convert to File
+    const getCroppedImg = async (image: HTMLImageElement, crop: PixelCrop): Promise<Blob> => {
+        const canvas = canvasRef.current || document.createElement('canvas');
+        canvasRef.current = canvas;
+        const scaleX = image.naturalWidth / image.width;
+        const scaleY = image.naturalHeight / image.height;
+        canvas.width = crop.width * scaleX;
+        canvas.height = crop.height * scaleY;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Canvas context not available');
+
+        ctx.drawImage(
+            image,
+            crop.x * scaleX,
+            crop.y * scaleY,
+            crop.width * scaleX,
+            crop.height * scaleY,
+            0,
+            0,
+            crop.width * scaleX,
+            crop.height * scaleY
+        );
+
+        return new Promise((resolve) => {
+            canvas.toBlob((blob) => {
+                if (blob) resolve(blob);
+            }, 'image/jpeg', 1);
+        });
+    };
+
+    const handleCropComplete = async (crop: PixelCrop) => {
+        if (imageRef.current && crop.width && crop.height) {
+            try {
+                const croppedBlob = await getCroppedImg(imageRef.current, crop);
+                setCroppedImage(croppedBlob);
+            } catch (error) {
+                console.error('Error cropping image:', error);
+                alert('Failed to crop image.');
+            }
+        }
+    };
+
+    const handleCropSave = () => {
+        if (croppedImage && cropField) {
+            const file = new File([croppedImage], `${cropField}-${Date.now()}.jpg`, { type: 'image/jpeg' });
+            setWedding({ ...wedding, [cropField]: file });
+            setImageToCrop(null);
+            setCropField(null);
+            setCroppedImage(null);
+        }
+    };
+
+    const handleCropCancel = () => {
+        setImageToCrop(null);
+        setCropField(null);
+        setCroppedImage(null);
+    };
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'groom_img' | 'bride_img') => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                setImageToCrop(reader.result as string);
+                setCropField(field);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     const handleWeddingSubmit = async (e: FormEvent) => {
         e.preventDefault();
@@ -267,6 +330,7 @@ export default function CMS() {
         }
     };
 
+    // Other functions (handleMomentsSubmit, handleDeleteMoment, handleGiftSubmit, handleDeleteGift, handleAssetSubmit, handleDeleteAllCongrats) remain unchanged
     const handleMomentsSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!weddingId) {
@@ -375,109 +439,6 @@ export default function CMS() {
             console.error('Error deleting gift:', error);
             alert('Failed to delete gift.');
         }
-    };
-
-    const handleInviteSubmit = async (e: FormEvent) => {
-        e.preventDefault();
-        if (!weddingId) {
-            alert('Please save wedding details first.');
-            return;
-        }
-        try {
-            const { data, error } = await supabase
-                .from('invites')
-                .insert({
-                    wedding_id: weddingId,
-                    invited_name: newInvite.invited_name,
-                })
-                .select();
-            if (error) {
-                console.error('Invite insert error:', error);
-                throw error;
-            }
-            setInvites([...data, ...invites]);
-            alert('Invite saved!');
-            setNewInvite({ invited_name: '' });
-        } catch (error) {
-            console.error('Error saving invite:', error);
-            alert('Failed to save invite.');
-        }
-    };
-
-    const handleDeleteInvite = async (inviteId: string) => {
-        try {
-            const { error } = await supabase.from('invites').delete().eq('id', inviteId);
-            if (error) {
-                console.error('Error deleting invite:', error);
-                throw error;
-            }
-            setInvites(invites.filter((invite) => invite.id !== inviteId));
-            alert('Invite deleted!');
-        } catch (error) {
-            console.error('Error deleting invite:', error);
-            alert('Failed to delete invite.');
-        }
-    };
-
-    const handleDeleteAllInvites = async () => {
-        if (!weddingId) {
-            alert('Please save wedding details first.');
-            return;
-        }
-        if (!confirm('Are you sure you want to delete all invites? This action cannot be undone.')) {
-            return;
-        }
-        try {
-            const { error, count } = await supabase
-                .from('invites')
-                .delete()
-                .eq('wedding_id', weddingId);
-            if (error) {
-                console.error('Error deleting all invites:', error);
-                throw error;
-            }
-            setInvites([]);
-            if (count === 0) {
-                alert('No invites found to delete.');
-            } else {
-                alert(`Successfully deleted ${count} invite(s)!`);
-            }
-        } catch (error) {
-            console.error('Error deleting all invites:', error);
-            alert('Failed to delete invites.');
-        }
-    };
-
-    const generateShareLink = (invitedName: string) => {
-        const baseUrl = 'https://wedding-invitation-six-iota.vercel.app';
-        const encodedName = encodeURIComponent(invitedName);
-        const link = `${baseUrl}?invited_name=${encodedName}`;
-        return `Assalamualaikum Warahmatullahi Wabarakatuh
-
-Tanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i ${invitedName} untuk menghadiri acara pernikahan putra/i kami yaitu ${wedding.groom_name} & ${wedding.bride_name}.
-
-Berikut link undangan kami, untuk info lengkap dari acara bisa kunjungi :
-
-${link}
-
-Merupakan suatu kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i berkenan untuk hadir dan memberikan doa restu.
-
-Mohon maaf perihal undangan hanya di bagikan melalui pesan ini.
-
-Dan agar selalu menjaga kesehatan bersama serta datang pada waktu yang telah ditentukan.
-
-Terima kasih banyak atas perhatiannya.
-
-Wassalamualaikum Warahmatullahi Wabarakatuh`;
-    };
-
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text).then(() => {
-            alert('Invitation copied to clipboard!');
-        }).catch((error) => {
-            console.error('Error copying to clipboard:', error);
-            alert('Failed to copy invitation.');
-        });
     };
 
     const handleAssetSubmit = async (e: FormEvent) => {
@@ -595,6 +556,57 @@ Wassalamualaikum Warahmatullahi Wabarakatuh`;
                     Wedding Invitation CMS
                 </h1>
 
+                {/* Navigation to Invites Page */}
+                <div className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100">
+                    <h2 className="text-2xl font-semibold mb-6 text-rose-600">Manage Invites</h2>
+                    <Link href="/invites">
+                        <button
+                            className="w-full bg-rose-500 text-white py-3 rounded-lg hover:bg-rose-600 transition-colors duration-300 font-medium"
+                        >
+                            Go to Invites Management
+                        </button>
+                    </Link>
+                </div>
+
+                {/* Cropper Modal */}
+                {imageToCrop && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full">
+                            <h3 className="text-xl font-semibold mb-4 text-rose-600">
+                                Crop {cropField === 'groom_img' ? 'Groom Image' : 'Bride Image'}
+                            </h3>
+                            <ReactCrop
+                                crop={crop}
+                                onChange={(_, percentCrop) => setCrop(percentCrop)}
+                                onComplete={handleCropComplete}
+                                aspect={1} // Optional: enforce square crop
+                            >
+                                <img
+                                    src={imageToCrop}
+                                    ref={imageRef}
+                                    alt="Image to crop"
+                                    className="max-w-full max-h-[400px]"
+                                />
+                            </ReactCrop>
+                            <div className="flex justify-end mt-4 space-x-2">
+                                <button
+                                    onClick={handleCropCancel}
+                                    className="bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleCropSave}
+                                    className="bg-rose-500 text-white py-2 px-4 rounded-lg hover:bg-rose-600 transition-colors"
+                                    disabled={!croppedImage}
+                                >
+                                    Save Crop
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                
                 {/* Wedding Details Section */}
                 <form
                     onSubmit={handleWeddingSubmit}
@@ -697,7 +709,7 @@ Wassalamualaikum Warahmatullahi Wabarakatuh`;
                             <input
                                 type="file"
                                 accept="image/*"
-                                onChange={(e) => setWedding({ ...wedding, groom_img: e.target.files?.[0] || null })}
+                                onChange={(e) => handleImageChange(e, 'groom_img')}
                                 className="w-full p-3 text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 transition-colors"
                             />
                         </div>
@@ -720,7 +732,7 @@ Wassalamualaikum Warahmatullahi Wabarakatuh`;
                             <input
                                 type="file"
                                 accept="image/*"
-                                onChange={(e) => setWedding({ ...wedding, bride_img: e.target.files?.[0] || null })}
+                                onChange={(e) => handleImageChange(e, 'bride_img')}
                                 className="w-full p-3 text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 transition-colors"
                             />
                         </div>
@@ -824,69 +836,6 @@ Wassalamualaikum Warahmatullahi Wabarakatuh`;
                         {weddingId ? 'Update Wedding Details' : 'Save Wedding Details'}
                     </button>
                 </form>
-
-                {/* Invites Section */}
-                <div className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100">
-                    <h2 className="text-2xl font-semibold mb-6 text-rose-600">Invited Guests</h2>
-                    <form onSubmit={handleInviteSubmit} className="mb-6 space-y-4">
-                        <div className="flex items-end space-x-4">
-                            <div className="flex-1">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Invited Guest Name</label>
-                                <input
-                                    type="text"
-                                    value={newInvite.invited_name}
-                                    onChange={(e) => setNewInvite({ ...newInvite, invited_name: e.target.value })}
-                                    className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
-                                    required
-                                />
-                            </div>
-                            <button
-                                type="button"
-                                onClick={handleDeleteAllInvites}
-                                className="bg-red-500 text-white py-3 px-6 rounded-lg hover:bg-red-600 transition-colors duration-300 font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                disabled={!weddingId}
-                            >
-                                Delete All Invites
-                            </button>
-                        </div>
-                        <button
-                            type="submit"
-                            className="w-full bg-rose-500 text-white py-3 rounded-lg hover:bg-rose-600 transition-colors duration-300 font-medium"
-                        >
-                            Add Invite
-                        </button>
-                    </form>
-                    {invites.length > 0 ? (
-                        <div className="space-y-4">
-                            {invites.map((invite) => (
-                                <div
-                                    key={invite.id}
-                                    className="p-4 bg-rose-50 rounded-lg shadow-sm border-l-4 border-rose-300 flex justify-between items-center transition-transform duration-300 hover:shadow-md"
-                                >
-                                    <div>
-                                        <p className="text-gray-700 font-medium">{invite.invited_name}</p>
-                                    </div>
-                                    <div className="flex space-x-2">
-                                        <button
-                                            onClick={() => copyToClipboard(generateShareLink(invite.invited_name))}
-                                            className="bg-amber-500 text-white py-2 px-4 rounded-lg hover:bg-amber-600 transition-colors duration-300"
-                                        >
-                                            Copy Share Link
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteInvite(invite.id)}
-                                            className="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors duration-300"
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-gray-500 italic">No invites added yet.</p>
-                    )}
-                </div>
 
                 {/* Moments Section */}
                 <div className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100">
