@@ -33,6 +33,7 @@ interface Gift {
     id: string;
     envelope_name: string;
     envelope_number: string;
+    rek_name: string;
 }
 
 interface Invite {
@@ -43,6 +44,7 @@ interface Invite {
 interface NewGift {
     envelope_name: string;
     envelope_number: string;
+    rek_name: string;
 }
 
 interface NewInvite {
@@ -79,7 +81,7 @@ export default function CMS() {
     const [moments, setMoments] = useState<Moment[]>([]);
     const [newMoments, setNewMoments] = useState<{ moments_img: File[] }>({ moments_img: [] });
     const [gifts, setGifts] = useState<Gift[]>([]);
-    const [newGift, setNewGift] = useState<NewGift>({ envelope_name: '', envelope_number: '' });
+    const [newGift, setNewGift] = useState<NewGift>({ envelope_name: '', envelope_number: '', rek_name: '' });
     const [invites, setInvites] = useState<Invite[]>([]);
     const [newInvite, setNewInvite] = useState<NewInvite>({ invited_name: '' });
     const [asset, setAsset] = useState<Asset>({ id: undefined, music: null, music_url: null });
@@ -116,7 +118,7 @@ export default function CMS() {
 
                     const { data: giftsData, error: giftsError } = await supabase
                         .from('gifts')
-                        .select('id, envelope_name, envelope_number')
+                        .select('id, envelope_name, envelope_number, rek_name')
                         .eq('wedding_id', weddingData.id);
                     if (giftsError) throw giftsError;
                     setGifts(giftsData || []);
@@ -344,6 +346,7 @@ export default function CMS() {
                     wedding_id: weddingId,
                     envelope_name: newGift.envelope_name,
                     envelope_number: newGift.envelope_number,
+                    rek_name: newGift.rek_name,
                 })
                 .select();
             if (error) {
@@ -352,7 +355,7 @@ export default function CMS() {
             }
             setGifts([...gifts, ...data]);
             alert('Gift saved!');
-            setNewGift({ envelope_name: '', envelope_number: '' });
+            setNewGift({ envelope_name: '', envelope_number: '', rek_name: '' });
         } catch (error) {
             console.error('Error saving gift:', error);
             alert('Failed to save gift.');
@@ -948,6 +951,17 @@ Wassalamualaikum Warahmatullahi Wabarakatuh`;
                             />
                         </div>
                         <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
+                            <input
+                                type="text"
+                                value={newGift.rek_name}
+                                onChange={(e) => setNewGift({ ...newGift, rek_name: e.target.value })}
+                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                placeholder="e.g., BCA, BRI, Mandiri"
+                                required
+                            />
+                        </div>
+                        <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Envelope Number</label>
                             <input
                                 type="text"
@@ -973,6 +987,7 @@ Wassalamualaikum Warahmatullahi Wabarakatuh`;
                                 >
                                     <div>
                                         <p className="text-gray-700 font-medium">{gift.envelope_name}</p>
+                                        <p className="text-gray-500 text-sm">{gift.rek_name}</p>
                                         <p className="text-gray-500 text-sm">{gift.envelope_number}</p>
                                     </div>
                                     <button

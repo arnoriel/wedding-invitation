@@ -37,6 +37,7 @@ interface Moment {
 interface Gift {
   envelope_name: string;
   envelope_number: string;
+  rek_name: string;
 }
 
 interface Congrats {
@@ -85,6 +86,9 @@ export default function Wedding({ wedding }: WeddingProps) {
   const [invitedName, setInvitedName] = useState<string>('Tamu Undangan');
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  // Countdown states
+  const [contractCountdown, setContractCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, isPast: false });
+  const [receptionCountdown, setReceptionCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, isPast: false });
 
   const attendCount = congrats.filter((congrat) => congrat.presence === 'present').length;
   const notAttendCount = congrats.filter((congrat) => congrat.presence === 'not_present').length;
@@ -119,7 +123,7 @@ export default function Wedding({ wedding }: WeddingProps) {
 
         const { data: giftsData, error: giftsError } = await supabase
           .from('gifts')
-          .select('envelope_name, envelope_number')
+          .select('envelope_name, envelope_number, rek_name')
           .eq('wedding_id', wedding.id);
         if (giftsError) throw giftsError;
         setGifts(giftsData);
@@ -145,6 +149,41 @@ export default function Wedding({ wedding }: WeddingProps) {
       }
     }
     fetchData();
+  }, [wedding]);
+
+  // Countdown logic
+  useEffect(() => {
+    if (!wedding?.date || !wedding?.contract_time || !wedding?.time) return;
+
+    const getTimeRemaining = (targetDateTime: string) => {
+      const now = new Date();
+      const target = new Date(targetDateTime);
+      const diff = target.getTime() - now.getTime();
+
+      if (diff <= 0) {
+        return { days: 0, hours: 0, minutes: 0, seconds: 0, isPast: true };
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      return { days, hours, minutes, seconds, isPast: false };
+    };
+
+    const contractTarget = `${wedding.date}T${wedding.contract_time}`;
+    const receptionTarget = `${wedding.date}T${wedding.time}`;
+
+    const updateCountdown = () => {
+      setContractCountdown(getTimeRemaining(contractTarget));
+      setReceptionCountdown(getTimeRemaining(receptionTarget));
+    };
+
+    updateCountdown(); // Initial update
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
   }, [wedding]);
 
   const toggleAudio = () => {
@@ -312,7 +351,6 @@ export default function Wedding({ wedding }: WeddingProps) {
         </audio>
       )}
 
-      {/* Rest of your JSX remains unchanged */}
       <>
         {asset?.music && (
           <button
@@ -500,6 +538,71 @@ export default function Wedding({ wedding }: WeddingProps) {
           </h2>
         </section>
 
+         {/* Countdown Section */}
+          <div className="mt-6 w-full text-center" data-aos="fade-up" data-aos-delay="200">
+            <h3 className="text-sm md:text-base text-rose-800 font-semibold mb-4">
+              Waktu Menuju Hari Bahagia
+            </h3>
+            <div className="flex flex-col sm:flex-row justify-center gap-6">
+              <div className="flex flex-col items-center">
+                <p className="text-xs md:text-sm text-rose-700 font-medium mb-2">
+                  {contractCountdown.isPast ? "Akad Pernikahan Telah Dimulai" : "Waktu Hingga Akad Pernikahan Dimulai"}
+                </p>
+                {!contractCountdown.isPast && (
+                  <div className="flex gap-2 bg-pink-200 rounded-lg p-3 shadow-md text-rose-800 font-mono text-lg md:text-xl">
+                    <div className="flex flex-col items-center">
+                      <span className="font-bold">{contractCountdown.days.toString().padStart(2, '0')}</span>
+                      <span className="text-xs">Hari</span>
+                    </div>
+                    <span>:</span>
+                    <div className="flex flex-col items-center">
+                      <span className="font-bold">{contractCountdown.hours.toString().padStart(2, '0')}</span>
+                      <span className="text-xs">Jam</span>
+                    </div>
+                    <span>:</span>
+                    <div className="flex flex-col items-center">
+                      <span className="font-bold">{contractCountdown.minutes.toString().padStart(2, '0')}</span>
+                      <span className="text-xs">Menit</span>
+                    </div>
+                    <span>:</span>
+                    <div className="flex flex-col items-center">
+                      <span className="font-bold">{contractCountdown.seconds.toString().padStart(2, '0')}</span>
+                      <span className="text-xs">Detik</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col items-center">
+                <p className="text-xs md:text-sm text-rose-700 font-medium mb-2">
+                  {receptionCountdown.isPast ? "Resepsi Pernikahan Telah Dimulai" : "Waktu Hingga Resepsi Pernikahan Dimulai"}
+                </p>
+                {!receptionCountdown.isPast && (
+                  <div className="flex gap-2 bg-pink-200 rounded-lg p-3 shadow-md text-rose-800 font-mono text-lg md:text-xl">
+                    <div className="flex flex-col items-center">
+                      <span className="font-bold">{receptionCountdown.days.toString().padStart(2, '0')}</span>
+                      <span className="text-xs">Hari</span>
+                    </div>
+                    <span>:</span>
+                    <div className="flex flex-col items-center">
+                      <span className="font-bold">{receptionCountdown.hours.toString().padStart(2, '0')}</span>
+                      <span className="text-xs">Jam</span>
+                    </div>
+                    <span>:</span>
+                    <div className="flex flex-col items-center">
+                      <span className="font-bold">{receptionCountdown.minutes.toString().padStart(2, '0')}</span>
+                      <span className="text-xs">Menit</span>
+                    </div>
+                    <span>:</span>
+                    <div className="flex flex-col items-center">
+                      <span className="font-bold">{receptionCountdown.seconds.toString().padStart(2, '0')}</span>
+                      <span className="text-xs">Detik</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
         {/* Bagian momen */}
         {moments.length > 0 && (
           <section className="py-16 px-6 md:px-12 bg-transparent" data-aos="fade-in" data-aos-delay="100">
@@ -564,12 +667,12 @@ export default function Wedding({ wedding }: WeddingProps) {
                     >
                       <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r"></div>
                       <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold text-white">Amplop Digital</h3>
+                        <h3 className="text-lg font-semibold text-white">{gift.rek_name}</h3>
                         <div className="text-xs text-gray-300 opacity-75">#{index + 1}</div>
                       </div>
                       <div className="space-y-2">
                         <p className="text-sm font-medium">
-                          <span className="text-amber-200">Nama:</span> {gift.envelope_name}
+                          <span className="text-amber-200">A/N:</span> {gift.envelope_name}
                         </p>
                         <p className="text-sm font-medium">
                           <span className="text-amber-200">Nomor:</span> {gift.envelope_number}
@@ -682,10 +785,10 @@ export default function Wedding({ wedding }: WeddingProps) {
             <Image
               src="/images/footer.png"
               alt="Dekorasi Penutup"
-              width={150} // Ensure width matches the intended display size
-              height={100} // Ensure height matches the intended display size
+              width={150}
+              height={100}
               className="object-contain"
-              style={{ width: 'auto', height: 'auto' }} // Maintain aspect ratio
+              style={{ width: 'auto', height: 'auto' }}
             />
           </div>
           <p className="relative">Dibuat dengan cinta untuk {wedding.groom_name} & {wedding.bride_name}</p>
