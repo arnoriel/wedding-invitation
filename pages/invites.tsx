@@ -1,4 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
+import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 
 interface Invite {
@@ -30,16 +31,33 @@ export default function Invites() {
     const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
     const [deleteInviteId, setDeleteInviteId] = useState<string | null>(null);
     const [deleteAll, setDeleteAll] = useState<boolean>(false);
+    const router = useRouter();
+    const { id } = router.query;
 
     useEffect(() => {
         async function fetchData() {
             try {
-                const { data: weddingData, error: weddingError } = await supabase
-                    .from('wedding')
-                    .select('id, groom_name, bride_name')
-                    .limit(1)
-                    .single();
-                if (weddingError && !weddingError.message.includes('No rows found')) throw weddingError;
+                let weddingData = null;
+                if (id && typeof id === 'string') {
+                    // Fetch specific wedding by ID from URL query
+                    const { data, error } = await supabase
+                        .from('wedding')
+                        .select('id, groom_name, bride_name')
+                        .eq('id', id)
+                        .single();
+                    if (error && !error.message.includes('No rows found')) throw error;
+                    weddingData = data;
+                } else {
+                    // Fallback to first wedding if no ID provided
+                    const { data, error } = await supabase
+                        .from('wedding')
+                        .select('id, groom_name, bride_name')
+                        .limit(1)
+                        .single();
+                    if (error && !error.message.includes('No rows found')) throw error;
+                    weddingData = data;
+                }
+
                 if (weddingData) {
                     setWeddingId(weddingData.id);
                     setWedding(weddingData);
@@ -59,7 +77,7 @@ export default function Invites() {
             }
         }
         fetchData();
-    }, []);
+    }, [id]);
 
     useEffect(() => {
         if (notification) {
@@ -145,12 +163,14 @@ export default function Invites() {
     const generateShareLink = (invitedName: string) => {
         const baseUrl = 'https://wedding-invitation-six-iota.vercel.app';
         const encodedName = encodeURIComponent(invitedName);
-        const link = `${baseUrl}?invited_name=${encodedName}`;
+        const encodedGroomName = encodeURIComponent(wedding?.groom_name || 'Mempelai Pria');
+        const encodedBrideName = encodeURIComponent(wedding?.bride_name || 'Mempelai Wanita');
+        const link = `${baseUrl}/wedding?weddingId=${weddingId}&groom_name=${encodedGroomName}&bride_name=${encodedBrideName}&invited_name=${encodedName}`;
         return `Assalamualaikum Warahmatullahi Wabarakatuh
 
 Tanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i ${invitedName} untuk menghadiri acara pernikahan putra/i kami yaitu ${wedding?.groom_name || 'Mempelai Pria'} & ${wedding?.bride_name || 'Mempelai Wanita'}.
 
-Berikut link undangan kami, untuk info lengkap dari acara bisa kunjungi :
+Berikut link undangan kami, untuk info lengkap dari acara bisa kunjungi:
 
 ${link}
 

@@ -1,5 +1,4 @@
-import { useState, useEffect, FormEvent, useRef } from 'react';
-import { useRouter } from 'next/router';
+import { useState, FormEvent, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
@@ -7,7 +6,6 @@ import 'react-image-crop/dist/ReactCrop.css';
 import { supabase } from '@/lib/supabase';
 
 interface WeddingForm {
-    id?: string;
     groom: string;
     bride: string;
     groom_name: string;
@@ -16,9 +14,9 @@ interface WeddingForm {
     bride_initial: string;
     groom_desc: string;
     bride_desc: string;
-    groom_img: File | null | string;
-    bride_img: File | null | string;
-    modal_img: File | null | string;
+    groom_img: File | null;
+    bride_img: File | null;
+    modal_img: File | null;
     description: string;
     place: string;
     date: string;
@@ -29,30 +27,20 @@ interface WeddingForm {
 }
 
 interface Moment {
-    id: string;
-    moments_img: string[];
+    moments_img: File[];
 }
 
 interface Gift {
-    id: string;
     envelope_name: string;
     envelope_number: string;
     rek_name: string;
 }
 
 interface Asset {
-    id?: string;
     music: File | null;
-    music_url: string | null;
 }
 
-interface NewGift {
-    envelope_name: string;
-    envelope_number: string;
-    rek_name: string;
-}
-
-export default function CMS() {
+export default function AddWedding() {
     const [wedding, setWedding] = useState<WeddingForm>({
         groom: '',
         bride: '',
@@ -73,14 +61,10 @@ export default function CMS() {
         contract_time: '',
         invite_desc: '',
     });
-    const [moments, setMoments] = useState<Moment[]>([]);
-    const [newMoments, setNewMoments] = useState<{ moments_img: File[] }>({ moments_img: [] });
-    const [gifts, setGifts] = useState<Gift[]>([]);
-    const [newGift, setNewGift] = useState<NewGift>({ envelope_name: '', envelope_number: '', rek_name: '' });
-    const [asset, setAsset] = useState<Asset>({ id: undefined, music: null, music_url: null });
+    const [newMoments, setNewMoments] = useState<Moment>({ moments_img: [] });
+    const [newGift, setNewGift] = useState<Gift>({ envelope_name: '', envelope_number: '', rek_name: '' });
+    const [asset, setAsset] = useState<Asset>({ music: null });
     const [weddingId, setWeddingId] = useState<string | null>(null);
-    const router = useRouter();
-    const { id } = router.query;
 
     // Cropper state
     const [crop, setCrop] = useState<Crop>({ unit: '%', x: 25, y: 25, width: 50, height: 50 });
@@ -89,74 +73,6 @@ export default function CMS() {
     const [cropField, setCropField] = useState<'groom_img' | 'bride_img' | null>(null);
     const imageRef = useRef<HTMLImageElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-    useEffect(() => {
-        async function fetchData() {
-            try {
-                let weddingData = null;
-                if (id) {
-                    // Fetch specific wedding by ID if provided
-                    const { data, error } = await supabase
-                        .from('wedding')
-                        .select('*')
-                        .eq('id', id)
-                        .single();
-                    if (error && !error.message.includes('No rows found')) throw error;
-                    weddingData = data;
-                } else {
-                    // Fetch first wedding if no ID is provided (for backward compatibility)
-                    const { data, error } = await supabase
-                        .from('wedding')
-                        .select('*')
-                        .limit(1)
-                        .single();
-                    if (error && !error.message.includes('No rows found')) throw error;
-                    weddingData = data;
-                }
-
-                if (weddingData) {
-                    setWedding({
-                        ...weddingData,
-                        groom_img: weddingData.groom_img || null,
-                        bride_img: weddingData.bride_img || null,
-                        modal_img: weddingData.modal_img || null,
-                        groom_initial: weddingData.groom_initial || '',
-                        bride_initial: weddingData.bride_initial || '',
-                    });
-                    setWeddingId(weddingData.id);
-                }
-
-                if (weddingData?.id) {
-                    const { data: momentsData, error: momentsError } = await supabase
-                        .from('moments')
-                        .select('id, moments_img')
-                        .eq('wedding_id', weddingData.id);
-                    if (momentsError) throw momentsError;
-                    setMoments(momentsData || []);
-
-                    const { data: giftsData, error: giftsError } = await supabase
-                        .from('gifts')
-                        .select('id, envelope_name, envelope_number, rek_name')
-                        .eq('wedding_id', weddingData.id);
-                    if (giftsError) throw giftsError;
-                    setGifts(giftsData || []);
-
-                    const { data: assetData, error: assetError } = await supabase
-                        .from('assets')
-                        .select('id, music')
-                        .eq('wedding_id', weddingData.id)
-                        .single();
-                    if (assetError && !assetError.message.includes('No rows found')) throw assetError;
-                    if (assetData) {
-                        setAsset({ id: assetData.id, music: null, music_url: assetData.music });
-                    }
-                }
-            } catch (error) {
-                console.error('Error fetching data:', error);
-            }
-        }
-        fetchData();
-    }, [id]);
 
     const getCroppedImg = async (image: HTMLImageElement, crop: PixelCrop): Promise<Blob> => {
         const canvas = canvasRef.current || document.createElement('canvas');
@@ -230,116 +146,74 @@ export default function CMS() {
     const handleWeddingSubmit = async (e: FormEvent) => {
         e.preventDefault();
         try {
-            let groomImgUrl = typeof wedding.groom_img === 'string' ? wedding.groom_img : wedding.groom;
-            let brideImgUrl = typeof wedding.bride_img === 'string' ? wedding.bride_img : wedding.bride;
-            let modalImgUrl = typeof wedding.modal_img === 'string' ? wedding.modal_img : null;
+            let groomImgUrl = null;
+            let brideImgUrl = null;
+            let modalImgUrl = null;
 
-            if (wedding.groom_img instanceof File) {
+            if (wedding.groom_img) {
                 const { data, error } = await supabase.storage
                     .from('groom-images')
                     .upload(`groom-${Date.now()}.jpg`, wedding.groom_img, {
                         cacheControl: '3600',
                         upsert: false,
                     });
-                if (error) {
-                    console.error('Groom image upload error:', error);
-                    throw error;
-                }
+                if (error) throw error;
                 groomImgUrl = supabase.storage.from('groom-images').getPublicUrl(data.path).data.publicUrl;
             }
-            if (wedding.bride_img instanceof File) {
+            if (wedding.bride_img) {
                 const { data, error } = await supabase.storage
                     .from('bride-images')
                     .upload(`bride-${Date.now()}.jpg`, wedding.bride_img, {
                         cacheControl: '3600',
                         upsert: false,
                     });
-                if (error) {
-                    console.error('Bride image upload error:', error);
-                    throw error;
-                }
+                if (error) throw error;
                 brideImgUrl = supabase.storage.from('bride-images').getPublicUrl(data.path).data.publicUrl;
             }
-            if (wedding.modal_img instanceof File) {
+            if (wedding.modal_img) {
                 const { data, error } = await supabase.storage
                     .from('images')
                     .upload(`modal-${Date.now()}.jpg`, wedding.modal_img, {
                         cacheControl: '3600',
                         upsert: false,
                     });
-                if (error) {
-                    console.error('Modal image upload error:', error);
-                    throw error;
-                }
+                if (error) throw error;
                 modalImgUrl = supabase.storage.from('images').getPublicUrl(data.path).data.publicUrl;
             }
 
-            if (weddingId) {
-                const { error } = await supabase
-                    .from('wedding')
-                    .update({
-                        groom: wedding.groom,
-                        bride: wedding.bride,
-                        groom_name: wedding.groom_name,
-                        bride_name: wedding.bride_name,
-                        groom_initial: wedding.groom_initial,
-                        bride_initial: wedding.bride_initial,
-                        groom_desc: wedding.groom_desc,
-                        bride_desc: wedding.bride_desc,
-                        groom_img: groomImgUrl,
-                        bride_img: brideImgUrl,
-                        modal_img: modalImgUrl,
-                        description: wedding.description,
-                        place: wedding.place,
-                        date: wedding.date,
-                        day: wedding.day,
-                        time: wedding.time,
-                        contract_time: wedding.contract_time,
-                        invite_desc: wedding.invite_desc,
-                    })
-                    .eq('id', weddingId);
-                if (error) {
-                    console.error('Wedding update error:', error);
-                    throw error;
-                }
-                alert('Wedding details updated!');
-            } else {
-                const { data, error } = await supabase
-                    .from('wedding')
-                    .insert({
-                        groom: wedding.groom,
-                        bride: wedding.bride,
-                        groom_name: wedding.groom_name,
-                        bride_name: wedding.bride_name,
-                        groom_initial: wedding.groom_initial,
-                        bride_initial: wedding.bride_initial,
-                        groom_desc: wedding.groom_desc,
-                        bride_desc: wedding.bride_desc,
-                        groom_img: groomImgUrl,
-                        bride_img: brideImgUrl,
-                        modal_img: modalImgUrl,
-                        description: wedding.description,
-                        place: wedding.place,
-                        date: wedding.date,
-                        day: wedding.day,
-                        time: wedding.time,
-                        contract_time: wedding.contract_time,
-                        invite_desc: wedding.invite_desc,
-                    })
-                    .select()
-                    .single();
-                if (error) {
-                    console.error('Wedding insert error:', error);
-                    throw error;
-                }
-                setWeddingId(data.id);
-                alert('Wedding details saved!');
-            }
+            const { data, error } = await supabase
+                .from('wedding')
+                .insert({
+                    groom: wedding.groom,
+                    bride: wedding.bride,
+                    groom_name: wedding.groom_name,
+                    bride_name: wedding.bride_name,
+                    groom_initial: wedding.groom_initial,
+                    bride_initial: wedding.bride_initial,
+                    groom_desc: wedding.groom_desc,
+                    bride_desc: wedding.bride_desc,
+                    groom_img: groomImgUrl,
+                    bride_img: brideImgUrl,
+                    modal_img: modalImgUrl,
+                    description: wedding.description,
+                    place: wedding.place,
+                    date: wedding.date,
+                    day: wedding.day,
+                    time: wedding.time,
+                    contract_time: wedding.contract_time,
+                    invite_desc: wedding.invite_desc,
+                })
+                .select()
+                .single();
+            if (error) throw error;
+
+            setWeddingId(data.id);
+            alert('Wedding details saved!');
             setWedding({
                 ...wedding,
-                groom_img: groomImgUrl,
-                bride_img: brideImgUrl,
-                modal_img: modalImgUrl,
+                groom_img: null,
+                bride_img: null,
+                modal_img: null,
             });
         } catch (error) {
             console.error('Error saving wedding:', error);
@@ -362,54 +236,21 @@ export default function CMS() {
                         cacheControl: '3600',
                         upsert: false,
                     });
-                if (error) {
-                    console.error('Moments image upload error:', error);
-                    throw error;
-                }
+                if (error) throw error;
                 const publicUrl = supabase.storage.from('moments-images').getPublicUrl(data.path).data.publicUrl;
                 momentImgUrls.push(publicUrl);
             }
             if (momentImgUrls.length > 0) {
-                const { data, error } = await supabase
+                const { error } = await supabase
                     .from('moments')
-                    .insert({ wedding_id: weddingId, moments_img: momentImgUrls })
-                    .select();
-                if (error) {
-                    console.error('Moments insert error:', error);
-                    throw error;
-                }
-                setMoments([...moments, ...data]);
+                    .insert({ wedding_id: weddingId, moments_img: momentImgUrls });
+                if (error) throw error;
                 alert('Moments saved!');
                 setNewMoments({ moments_img: [] });
             }
         } catch (error) {
             console.error('Error saving moments:', error);
             alert('Failed to save moments.');
-        }
-    };
-
-    const handleDeleteMoment = async (momentId: string, images: string[]) => {
-        try {
-            const imagePaths = images.map((url) => url.split('/').slice(-1)[0]);
-            const { error: storageError } = await supabase.storage
-                .from('moments-images')
-                .remove(imagePaths);
-            if (storageError) {
-                console.error('Error deleting moment images:', storageError);
-                throw storageError;
-            }
-
-            const { error } = await supabase.from('moments').delete().eq('id', momentId);
-            if (error) {
-                console.error('Error deleting moment:', error);
-                throw error;
-            }
-
-            setMoments(moments.filter((moment) => moment.id !== momentId));
-            alert('Moment deleted!');
-        } catch (error) {
-            console.error('Error deleting moment:', error);
-            alert('Failed to delete moment.');
         }
     };
 
@@ -420,40 +261,20 @@ export default function CMS() {
             return;
         }
         try {
-            const { data, error } = await supabase
+            const { error } = await supabase
                 .from('gifts')
                 .insert({
                     wedding_id: weddingId,
                     envelope_name: newGift.envelope_name,
                     envelope_number: newGift.envelope_number,
                     rek_name: newGift.rek_name,
-                })
-                .select();
-            if (error) {
-                console.error('Gift insert error:', error);
-                throw error;
-            }
-            setGifts([...gifts, ...data]);
+                });
+            if (error) throw error;
             alert('Gift saved!');
             setNewGift({ envelope_name: '', envelope_number: '', rek_name: '' });
         } catch (error) {
             console.error('Error saving gift:', error);
             alert('Failed to save gift.');
-        }
-    };
-
-    const handleDeleteGift = async (giftId: string) => {
-        try {
-            const { error } = await supabase.from('gifts').delete().eq('id', giftId);
-            if (error) {
-                console.error('Error deleting gift:', error);
-                throw error;
-            }
-            setGifts(gifts.filter((gift) => gift.id !== giftId));
-            alert('Gift deleted!');
-        } catch (error) {
-            console.error('Error deleting gift:', error);
-            alert('Failed to delete gift.');
         }
     };
 
@@ -464,19 +285,7 @@ export default function CMS() {
             return;
         }
         try {
-            let musicUrl = asset.music_url;
             if (asset.music) {
-                if (asset.music_url) {
-                    const oldFilePath = asset.music_url.split('/').slice(-1)[0];
-                    const { error: deleteError } = await supabase.storage
-                        .from('music-assets')
-                        .remove([oldFilePath]);
-                    if (deleteError) {
-                        console.error('Error deleting old music file:', deleteError);
-                        throw deleteError;
-                    }
-                }
-
                 const fileName = `music-${weddingId}.mp3`;
                 const { data, error } = await supabase.storage
                     .from('music-assets')
@@ -484,84 +293,20 @@ export default function CMS() {
                         cacheControl: '3600',
                         upsert: true,
                     });
-                if (error) {
-                    console.error('Music upload error:', error);
-                    throw error;
-                }
-                musicUrl = supabase.storage.from('music-assets').getPublicUrl(data.path).data.publicUrl;
-            }
+                if (error) throw error;
+                const musicUrl = supabase.storage.from('music-assets').getPublicUrl(data.path).data.publicUrl;
 
-            if (asset.id) {
-                const { error } = await supabase
+                const { error: insertError } = await supabase
                     .from('assets')
-                    .update({ music: musicUrl })
-                    .eq('id', asset.id);
-                if (error) {
-                    console.error('Asset update error:', error);
-                    throw error;
-                }
-            } else {
-                const { data, error } = await supabase
-                    .from('assets')
-                    .insert({ wedding_id: weddingId, music: musicUrl })
-                    .select()
-                    .single();
-                if (error) {
-                    console.error('Asset insert error:', error);
-                    throw error;
-                }
-                setAsset({ id: data.id, music: null, music_url: musicUrl });
-            }
+                    .insert({ wedding_id: weddingId, music: musicUrl });
+                if (insertError) throw insertError;
 
-            alert('Music asset updated!');
-            setAsset((prev) => ({ ...prev, music: null }));
-        } catch (error) {
-            console.error('Error updating asset:', error);
-            alert('Failed to update music asset.');
-        }
-    };
-
-    const handleDeleteAllCongrats = async () => {
-        if (!weddingId) {
-            alert('Please save wedding details first.');
-            return;
-        }
-        if (!confirm('Are you sure you want to delete all congratulatory messages? This action cannot be undone.')) {
-            return;
-        }
-        try {
-            console.log('Attempting to delete congrats for wedding_id:', weddingId);
-
-            const { data: congratsData, error: fetchError } = await supabase
-                .from('congrats')
-                .select('id')
-                .eq('wedding_id', weddingId);
-            if (fetchError) {
-                console.error('Error fetching congrats:', fetchError);
-                throw fetchError;
-            }
-            console.log('Found congrats entries:', congratsData.length);
-
-            const { error, count } = await supabase
-                .from('congrats')
-                .delete()
-                .eq('wedding_id', weddingId);
-
-            if (error) {
-                console.error('Error deleting all congrats:', error);
-                throw error;
-            }
-
-            console.log('Deleted congrats count:', count);
-
-            if (count === 0) {
-                alert('No congratulatory messages found to delete.');
-            } else {
-                alert(`Successfully deleted ${count} congratulate(s)!`);
+                alert('Music asset saved!');
+                setAsset({ music: null });
             }
         } catch (error) {
-            console.error('Error deleting all congrats:', (error as Error).message);
-            alert(`Failed to delete congratulatory messages: ${(error as Error).message}`);
+            console.error('Error saving music:', error);
+            alert('Failed to save music asset.');
         }
     };
 
@@ -569,7 +314,7 @@ export default function CMS() {
         <div className="min-h-screen bg-gradient-to-br from-rose-50 via-ivory-50 to-pink-50 py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
                 <h1 className="text-4xl font-extrabold text-center text-rose-700 mb-12 tracking-tight">
-                    Wedding Invitation CMS
+                    Add New Wedding
                 </h1>
 
                 {/* Navigation to Home Page */}
@@ -583,34 +328,6 @@ export default function CMS() {
                         </button>
                     </Link>
                 </div>
-
-                {/* Navigation to Invites Page */}
-                {weddingId && (
-                    <div className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100">
-                        <h2 className="text-2xl font-semibold mb-6 text-rose-600">Manage Invites</h2>
-                        <Link href={`/invites?id=${weddingId}`}>
-                            <button
-                                className="w-full bg-rose-500 text-white py-3 rounded-lg hover:bg-rose-600 transition-colors duration-300 font-medium"
-                            >
-                                Go to Invites Management
-                            </button>
-                        </Link>
-                    </div>
-                )}
-
-                 {/* View Wedding Page */}
-                {weddingId && (
-                    <div className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100">
-                        <h2 className="text-2xl font-semibold mb-6 text-rose-600">View Wedding Invitation</h2>
-                        <Link href={`/wedding?weddingId=${weddingId}&groom_name=${encodeURIComponent(wedding.groom_name)}&bride_name=${encodeURIComponent(wedding.bride_name)}`}>
-                            <button
-                                className="w-full bg-amber-500 text-white py-3 rounded-lg hover:bg-amber-600 transition-colors duration-300 font-medium"
-                            >
-                                View Wedding
-                            </button>
-                        </Link>
-                    </div>
-                )}
 
                 {/* Cropper Modal */}
                 {imageToCrop && (
@@ -650,7 +367,7 @@ export default function CMS() {
                         </div>
                     </div>
                 )}
-                
+
                 {/* Wedding Details Section */}
                 <form
                     onSubmit={handleWeddingSubmit}
@@ -736,19 +453,16 @@ export default function CMS() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Foto Pengantin Pria</label>
-                            {typeof wedding.groom_img === 'string' && wedding.groom_img && (
+                            {wedding.groom_img && (
                                 <div className="mb-4 relative w-full h-40">
                                     <Image
-                                        src={wedding.groom_img}
-                                        alt="Current Groom Image"
+                                        src={URL.createObjectURL(wedding.groom_img)}
+                                        alt="Groom Image Preview"
                                         fill
                                         className="object-cover rounded-lg shadow-sm"
                                         sizes="(max-width: 640px) 100vw, 50vw"
                                     />
                                 </div>
-                            )}
-                            {!wedding.groom_img && (
-                                <p className="text-gray-500 text-sm mb-2">No image uploaded yet.</p>
                             )}
                             <input
                                 type="file"
@@ -759,19 +473,16 @@ export default function CMS() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Foto Pengantin Wanita</label>
-                            {typeof wedding.bride_img === 'string' && wedding.bride_img && (
+                            {wedding.bride_img && (
                                 <div className="mb-4 relative w-full h-40">
                                     <Image
-                                        src={wedding.bride_img}
-                                        alt="Current Bride Image"
+                                        src={URL.createObjectURL(wedding.bride_img)}
+                                        alt="Bride Image Preview"
                                         fill
                                         className="object-cover rounded-lg shadow-sm"
                                         sizes="(max-width: 640px) 100vw, 50vw"
                                     />
                                 </div>
-                            )}
-                            {!wedding.bride_img && (
-                                <p className="text-gray-500 text-sm mb-2">No image uploaded yet.</p>
                             )}
                             <input
                                 type="file"
@@ -782,19 +493,16 @@ export default function CMS() {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Foto Modal</label>
-                            {typeof wedding.modal_img === 'string' && wedding.modal_img && (
+                            {wedding.modal_img && (
                                 <div className="mb-4 relative w-full h-40">
                                     <Image
-                                        src={wedding.modal_img}
-                                        alt="Current Modal Image"
+                                        src={URL.createObjectURL(wedding.modal_img)}
+                                        alt="Modal Image Preview"
                                         fill
                                         className="object-cover rounded-lg shadow-sm"
                                         sizes="(max-width: 640px) 100vw, 50vw"
                                     />
                                 </div>
-                            )}
-                            {!wedding.modal_img && (
-                                <p className="text-gray-500 text-sm mb-2">No modal image uploaded yet.</p>
                             )}
                             <input
                                 type="file"
@@ -877,62 +585,56 @@ export default function CMS() {
                         type="submit"
                         className="mt-6 w-full bg-rose-500 text-white py-3 rounded-lg hover:bg-rose-600 transition-colors duration-300 font-medium"
                     >
-                        {weddingId ? 'Update Wedding Details' : 'Save Wedding Details'}
+                        Save Wedding Details
                     </button>
                 </form>
 
                 {/* Moments Section */}
-                <div className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100">
+                <form
+                    onSubmit={handleMomentsSubmit}
+                    className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100"
+                >
                     <h2 className="text-2xl font-semibold mb-6 text-rose-600">Moments</h2>
-                    <form onSubmit={handleMomentsSubmit} className="mb-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Upload Moment Images</label>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                multiple
-                                onChange={(e) => setNewMoments({ moments_img: Array.from(e.target.files || []) })}
-                                className="w-full p-3 text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 transition-colors"
-                            />
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Upload Moment Images</label>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={(e) => setNewMoments({ moments_img: Array.from(e.target.files || []) })}
+                            className="w-full p-3 text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 transition-colors"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        className="mt-4 bg-rose-500 text-white py-3 px-6 rounded-lg hover:bg-rose-600 transition-colors duration-300 font-medium"
+                    >
+                        Add Moments
+                    </button>
+                    {newMoments.moments_img.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mt-6">
+                            {newMoments.moments_img.map((img, index) => (
+                                <div key={index} className="relative w-full h-64">
+                                    <Image
+                                        src={URL.createObjectURL(img)}
+                                        alt={`Moment Preview ${index + 1}`}
+                                        fill
+                                        className="object-cover rounded-lg shadow-md"
+                                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
+                                    />
+                                </div>
+                            ))}
                         </div>
-                        <button
-                            type="submit"
-                            className="mt-4 bg-rose-500 text-white py-3 px-6 rounded-lg hover:bg-rose-600 transition-colors duration-300 font-medium"
-                        >
-                            Add Moments
-                        </button>
-                    </form>
-                    {moments.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                            {moments.map((moment) =>
-                                moment.moments_img.map((img, index) => (
-                                    <div key={`${moment.id}-${index}`} className="relative w-full h-64 group">
-                                        <Image
-                                            src={img}
-                                            alt={`Moment ${index + 1}`}
-                                            fill
-                                            className="object-cover rounded-lg shadow-md transition-transform duration-300 group-hover:scale-105"
-                                            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
-                                        />
-                                        <button
-                                            onClick={() => handleDeleteMoment(moment.id, moment.moments_img)}
-                                            className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors duration-300 opacity-0 group-hover:opacity-100"
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    ) : (
-                        <p className="text-gray-500 italic">No moments added yet.</p>
                     )}
-                </div>
+                </form>
 
                 {/* Gift Envelopes Section */}
-                <div className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100">
+                <form
+                    onSubmit={handleGiftSubmit}
+                    className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100"
+                >
                     <h2 className="text-2xl font-semibold mb-6 text-rose-600">Gift Envelopes</h2>
-                    <form onSubmit={handleGiftSubmit} className="mb-6 space-y-4">
+                    <div className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Envelope Name</label>
                             <input
@@ -970,54 +672,15 @@ export default function CMS() {
                         >
                             Add Gift
                         </button>
-                    </form>
-                    {gifts.length > 0 ? (
-                        <div className="space-y-4">
-                            {gifts.map((gift) => (
-                                <div
-                                    key={gift.id}
-                                    className="p-4 bg-rose-50 rounded-lg shadow-sm border-l-4 border-rose-300 flex justify-between items-center transition-transform duration-300 hover:shadow-md"
-                                >
-                                    <div>
-                                        <p className="text-gray-700 font-medium">{gift.envelope_name}</p>
-                                        <p className="text-gray-500 text-sm">{gift.rek_name}</p>
-                                        <p className="text-gray-500 text-sm">{gift.envelope_number}</p>
-                                    </div>
-                                    <button
-                                        onClick={() => handleDeleteGift(gift.id)}
-                                        className="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors duration-300"
-                                    >
-                                        Delete
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-gray-500 italic">No gifts added yet.</p>
-                    )}
-                </div>
+                    </div>
+                </form>
 
                 {/* Music Section */}
                 <form
                     onSubmit={handleAssetSubmit}
                     className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100"
                 >
-                    <h2 className="text-2xl font-semibold mb-6 text-rose-600">Update Music</h2>
-                    {asset.music_url && (
-                        <div className="mb-4">
-                            <p className="text-gray-600">
-                                Current Music:{' '}
-                                <a
-                                    href={asset.music_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-rose-600 underline hover:text-rose-700"
-                                >
-                                    Listen to current music
-                                </a>
-                            </p>
-                        </div>
-                    )}
+                    <h2 className="text-2xl font-semibold mb-6 text-rose-600">Add Music</h2>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Upload Music File</label>
                         <input
@@ -1031,21 +694,9 @@ export default function CMS() {
                         type="submit"
                         className="mt-4 w-full bg-rose-500 text-white py-3 rounded-lg hover:bg-rose-600 transition-colors duration-300 font-medium"
                     >
-                        Update Music
+                        Save Music
                     </button>
                 </form>
-
-                {/* Manage Congrats Section */}
-                <div className="p-8 bg-white rounded-2xl shadow-lg border border-rose-100">
-                    <h2 className="text-2xl font-semibold mb-6 text-rose-600">Manage Congrats</h2>
-                    <button
-                        onClick={handleDeleteAllCongrats}
-                        className="w-full bg-red-500 text-white py-3 rounded-lg hover:bg-red-600 transition-colors duration-300 font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
-                        disabled={!weddingId}
-                    >
-                        Delete All Congrats
-                    </button>
-                </div>
             </div>
         </div>
     );
