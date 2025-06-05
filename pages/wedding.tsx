@@ -94,6 +94,13 @@ export default function Wedding({ wedding }: WeddingProps) {
   const attendCount = congrats.filter((congrat) => congrat.presence === 'present').length;
   const notAttendCount = congrats.filter((congrat) => congrat.presence === 'not_present').length;
 
+  const cleanBrideName = bride_name
+    ? decodeURIComponent(String(bride_name)).replace('bride_name=', '')
+    : wedding?.bride_name || 'Mempelai Wanita';
+  const cleanGroomName = groom_name
+    ? decodeURIComponent(String(groom_name)).replace('groom_name=', '')
+    : wedding?.groom_name || 'Mempelai Pria';
+
   useEffect(() => {
     // Extract invited_name from URL query parameter
     const params = new URLSearchParams(window.location.search);
@@ -262,11 +269,11 @@ export default function Wedding({ wedding }: WeddingProps) {
   return (
     <div className="min-h-screen relative overflow-x-hidden no-select">
       <Head>
-        <title>{`The Wedding of ${groom_name} & ${bride_name}`}</title>
+        <title>{`The Wedding of ${cleanGroomName} & ${cleanBrideName}`}</title>
         <meta name="description" content={wedding.description || "Undangan pernikahan digital untuk merayakan cinta kami."} />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={`${baseUrl}${router.asPath}`} />
-        <meta property="og:title" content={`The Wedding of ${groom_name} & ${bride_name}`} />
+        <meta property="og:title" content={`The Wedding of ${cleanGroomName} & ${cleanBrideName}`} />
         <meta property="og:description" content={wedding.description || "Join us in celebrating our special day!"} />
         <meta
           property="og:image"
@@ -279,10 +286,10 @@ export default function Wedding({ wedding }: WeddingProps) {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:site_name" content="Wedding Invitation" />
-        <meta property="og:image:alt" content={`Wedding invitation for ${groom_name} & ${bride_name}`} />
+        <meta property="og:image:alt" content={`Wedding invitation for ${cleanGroomName} & ${cleanBrideName}`} />
         <meta property="twitter:card" content="summary_large_image" />
         <meta property="twitter:url" content={`${baseUrl}${router.asPath}`} />
-        <meta property="twitter:title" content={`The Wedding of ${groom_name} & ${bride_name}`} />
+        <meta property="twitter:title" content={`The Wedding of ${cleanGroomName} & ${cleanBrideName}`} />
         <meta property="twitter:description" content={wedding.description || "Join us in celebrating our special day!"} />
         <meta
           property="twitter:image"
@@ -320,7 +327,7 @@ export default function Wedding({ wedding }: WeddingProps) {
             />
             <div className="relative z-10">
               <h1 className="text-4xl md:text-5xl text-white mb-70 mt-[-10%]">
-                Selamat Datang di Pernikahan {groom_name} & {bride_name}
+                Selamat Datang di Pernikahan {cleanGroomName} & {cleanBrideName}
               </h1>
               <p className="text-xl md:text-2xl text-white mb-4">Yang Terhormat, {invitedName}</p>
               <button
@@ -363,30 +370,31 @@ export default function Wedding({ wedding }: WeddingProps) {
         )}
 
         {/* Bagian undangan */}
-        <section
-          className="flex flex-col items-center justify-center py-24 bg-cover bg-center relative min-h-[400px]"
-          style={{
-            backgroundImage: 'url(https://images.unsplash.com/photo-1629129836873-0d3db7a49b8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80)',
-          }}
-          data-aos="fade-in"
-          data-aos-duration="1200"
-        >
-          <div className="absolute inset-0 bg-transparent"></div>
-          <div className="relative z-10 text-center px-4" data-aos="fade-up" data-aos-delay="200">
-            <h5 className="text-lg md:text-xl text-amber-700 mb-4">
-              Undangan Pernikahan
-            </h5>
-            <h2
-              className="text-5xl md:text-6xl text-amber-700 mb-6 tracking-wide"
-              style={{ fontFamily: "'Allura', cursive" }}
-            >
-              {groom_name} & {bride_name}
-            </h2>
-            <p className="text-lg md:text-xl text-amber-700 max-w-2xl mx-auto">
-              {wedding.description}
-            </p>
-          </div>
-        </section>
+              <section
+                  className="flex flex-col items-center justify-center py-24 bg-cover bg-center relative min-h-[400px]"
+                  style={{
+                      backgroundImage: 'url(https://images.unsplash.com/photo-1629129836873-0d3db7a49b8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80)',
+                  }}
+                  data-aos="fade-in"
+                  data-aos-duration="1200"
+              >
+                  <div className="absolute inset-0 bg-transparent"></div>
+                  <div className="relative z-10 text-center px-4" data-aos="fade-up" data-aos-delay="200">
+                      <h5 className="text-lg md:text-xl text-amber-700 mb-4">
+                          Undangan Pernikahan
+                      </h5>
+                      <h2
+                          className="text-5xl md:text-6xl text-amber-700 mb-6 tracking-wide"
+                          style={{ fontFamily: "'Allura', cursive" }}
+                      >
+                          {cleanGroomName} & {cleanBrideName}
+                      </h2>
+                      <p className="text-lg md:text-xl text-amber-700 max-w-_
+                        2xl mx-auto">
+                          {wedding.description}
+                      </p>
+                  </div>
+              </section>
 
         {/* Bagian mempelai */}
         <section className="py-16 px-6 md:px-12 bg-transparent">
@@ -781,20 +789,20 @@ export default function Wedding({ wedding }: WeddingProps) {
         </section>
 
         {/* Bagian penutup */}
-        <footer className="py-8 bg-pink-50 text-center text-neutral-800 relative">
-          <div className="absolute bottom-0 left-0">
-            <Image
-              src="/images/footer.png"
-              alt="Dekorasi Penutup"
-              width={150}
-              height={100}
-              className="object-contain"
-              style={{ width: 'auto', height: 'auto' }}
-            />
-          </div>
-          <p className="relative">Dibuat dengan cinta untuk {groom_name} & {bride_name}</p>
-          <p className="relative mt-2 text-sm">Rayakan ikatan kami dengan sukacita dan doa</p>
-        </footer>
+              <footer className="py-8 bg-pink-50 text-center text-neutral-800 relative">
+                  <div className="absolute bottom-0 left-0">
+                      <Image
+                          src="/images/footer.png"
+                          alt="Dekorasi Penutup"
+                          width={150}
+                          height={100}
+                          className="object-contain"
+                          style={{ width: 'auto', height: 'auto' }}
+                      />
+                  </div>
+                  <p className="relative">Dibuat dengan cinta untuk {cleanGroomName} & {cleanBrideName}</p>
+                  <p className="relative mt-2 text-sm">Rayakan ikatan kami dengan sukacita dan doa</p>
+              </footer>
       </>
     </div>
   );
