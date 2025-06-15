@@ -1,9 +1,10 @@
 import { useState, useEffect, FormEvent, useRef } from 'react';
-import { supabase } from '../lib/supabase';
+import { useRouter } from 'next/router';
 import Image from 'next/image';
 import Link from 'next/link';
-import ReactCrop, { Crop, PixelCrop } from 'react-image-crop'; // Import react-image-crop
-import 'react-image-crop/dist/ReactCrop.css'; // Import cropper styles
+import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
+import { supabase } from '@/lib/supabase';
 
 interface WeddingForm {
     id?: string;
@@ -78,6 +79,8 @@ export default function CMS() {
     const [newGift, setNewGift] = useState<NewGift>({ envelope_name: '', envelope_number: '', rek_name: '' });
     const [asset, setAsset] = useState<Asset>({ id: undefined, music: null, music_url: null });
     const [weddingId, setWeddingId] = useState<string | null>(null);
+    const router = useRouter();
+    const { id } = router.query;
 
     // Cropper state
     const [crop, setCrop] = useState<Crop>({ unit: '%', x: 25, y: 25, width: 50, height: 50 });
@@ -90,12 +93,25 @@ export default function CMS() {
     useEffect(() => {
         async function fetchData() {
             try {
-                const { data: weddingData, error: weddingError } = await supabase
-                    .from('wedding')
-                    .select('*')
-                    .limit(1)
-                    .single();
-                if (weddingError && !weddingError.message.includes('No rows found')) throw weddingError;
+                let weddingData = null;
+                if (id) {
+                    const { data, error } = await supabase
+                        .from('wedding')
+                        .select('*')
+                        .eq('id', id)
+                        .single();
+                    if (error && !error.message.includes('No rows found')) throw error;
+                    weddingData = data;
+                } else {
+                    const { data, error } = await supabase
+                        .from('wedding')
+                        .select('*')
+                        .limit(1)
+                        .single();
+                    if (error && !error.message.includes('No rows found')) throw error;
+                    weddingData = data;
+                }
+
                 if (weddingData) {
                     setWedding({
                         ...weddingData,
@@ -138,9 +154,8 @@ export default function CMS() {
             }
         }
         fetchData();
-    }, []);
+    }, [id]);
 
-    // Function to handle cropping and convert to File
     const getCroppedImg = async (image: HTMLImageElement, crop: PixelCrop): Promise<Blob> => {
         const canvas = canvasRef.current || document.createElement('canvas');
         canvasRef.current = canvas;
@@ -224,10 +239,7 @@ export default function CMS() {
                         cacheControl: '3600',
                         upsert: false,
                     });
-                if (error) {
-                    console.error('Groom image upload error:', error);
-                    throw error;
-                }
+                if (error) throw error;
                 groomImgUrl = supabase.storage.from('groom-images').getPublicUrl(data.path).data.publicUrl;
             }
             if (wedding.bride_img instanceof File) {
@@ -237,10 +249,7 @@ export default function CMS() {
                         cacheControl: '3600',
                         upsert: false,
                     });
-                if (error) {
-                    console.error('Bride image upload error:', error);
-                    throw error;
-                }
+                if (error) throw error;
                 brideImgUrl = supabase.storage.from('bride-images').getPublicUrl(data.path).data.publicUrl;
             }
             if (wedding.modal_img instanceof File) {
@@ -250,10 +259,7 @@ export default function CMS() {
                         cacheControl: '3600',
                         upsert: false,
                     });
-                if (error) {
-                    console.error('Modal image upload error:', error);
-                    throw error;
-                }
+                if (error) throw error;
                 modalImgUrl = supabase.storage.from('images').getPublicUrl(data.path).data.publicUrl;
             }
 
@@ -281,10 +287,7 @@ export default function CMS() {
                         invite_desc: wedding.invite_desc,
                     })
                     .eq('id', weddingId);
-                if (error) {
-                    console.error('Wedding update error:', error);
-                    throw error;
-                }
+                if (error) throw error;
                 alert('Wedding details updated!');
             } else {
                 const { data, error } = await supabase
@@ -311,10 +314,7 @@ export default function CMS() {
                     })
                     .select()
                     .single();
-                if (error) {
-                    console.error('Wedding insert error:', error);
-                    throw error;
-                }
+                if (error) throw error;
                 setWeddingId(data.id);
                 alert('Wedding details saved!');
             }
@@ -330,7 +330,6 @@ export default function CMS() {
         }
     };
 
-    // Other functions (handleMomentsSubmit, handleDeleteMoment, handleGiftSubmit, handleDeleteGift, handleAssetSubmit, handleDeleteAllCongrats) remain unchanged
     const handleMomentsSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!weddingId) {
@@ -346,10 +345,7 @@ export default function CMS() {
                         cacheControl: '3600',
                         upsert: false,
                     });
-                if (error) {
-                    console.error('Moments image upload error:', error);
-                    throw error;
-                }
+                if (error) throw error;
                 const publicUrl = supabase.storage.from('moments-images').getPublicUrl(data.path).data.publicUrl;
                 momentImgUrls.push(publicUrl);
             }
@@ -358,10 +354,7 @@ export default function CMS() {
                     .from('moments')
                     .insert({ wedding_id: weddingId, moments_img: momentImgUrls })
                     .select();
-                if (error) {
-                    console.error('Moments insert error:', error);
-                    throw error;
-                }
+                if (error) throw error;
                 setMoments([...moments, ...data]);
                 alert('Moments saved!');
                 setNewMoments({ moments_img: [] });
@@ -378,16 +371,10 @@ export default function CMS() {
             const { error: storageError } = await supabase.storage
                 .from('moments-images')
                 .remove(imagePaths);
-            if (storageError) {
-                console.error('Error deleting moment images:', storageError);
-                throw storageError;
-            }
+            if (storageError) throw storageError;
 
             const { error } = await supabase.from('moments').delete().eq('id', momentId);
-            if (error) {
-                console.error('Error deleting moment:', error);
-                throw error;
-            }
+            if (error) throw error;
 
             setMoments(moments.filter((moment) => moment.id !== momentId));
             alert('Moment deleted!');
@@ -413,10 +400,7 @@ export default function CMS() {
                     rek_name: newGift.rek_name,
                 })
                 .select();
-            if (error) {
-                console.error('Gift insert error:', error);
-                throw error;
-            }
+            if (error) throw error;
             setGifts([...gifts, ...data]);
             alert('Gift saved!');
             setNewGift({ envelope_name: '', envelope_number: '', rek_name: '' });
@@ -429,10 +413,7 @@ export default function CMS() {
     const handleDeleteGift = async (giftId: string) => {
         try {
             const { error } = await supabase.from('gifts').delete().eq('id', giftId);
-            if (error) {
-                console.error('Error deleting gift:', error);
-                throw error;
-            }
+            if (error) throw error;
             setGifts(gifts.filter((gift) => gift.id !== giftId));
             alert('Gift deleted!');
         } catch (error) {
@@ -455,10 +436,7 @@ export default function CMS() {
                     const { error: deleteError } = await supabase.storage
                         .from('music-assets')
                         .remove([oldFilePath]);
-                    if (deleteError) {
-                        console.error('Error deleting old music file:', deleteError);
-                        throw deleteError;
-                    }
+                    if (deleteError) throw deleteError;
                 }
 
                 const fileName = `music-${weddingId}.mp3`;
@@ -468,10 +446,7 @@ export default function CMS() {
                         cacheControl: '3600',
                         upsert: true,
                     });
-                if (error) {
-                    console.error('Music upload error:', error);
-                    throw error;
-                }
+                if (error) throw error;
                 musicUrl = supabase.storage.from('music-assets').getPublicUrl(data.path).data.publicUrl;
             }
 
@@ -480,20 +455,14 @@ export default function CMS() {
                     .from('assets')
                     .update({ music: musicUrl })
                     .eq('id', asset.id);
-                if (error) {
-                    console.error('Asset update error:', error);
-                    throw error;
-                }
+                if (error) throw error;
             } else {
                 const { data, error } = await supabase
                     .from('assets')
                     .insert({ wedding_id: weddingId, music: musicUrl })
                     .select()
                     .single();
-                if (error) {
-                    console.error('Asset insert error:', error);
-                    throw error;
-                }
+                if (error) throw error;
                 setAsset({ id: data.id, music: null, music_url: musicUrl });
             }
 
@@ -514,29 +483,17 @@ export default function CMS() {
             return;
         }
         try {
-            console.log('Attempting to delete congrats for wedding_id:', weddingId);
-
-            const { data: congratsData, error: fetchError } = await supabase
+            const { error: fetchError } = await supabase
                 .from('congrats')
                 .select('id')
                 .eq('wedding_id', weddingId);
-            if (fetchError) {
-                console.error('Error fetching congrats:', fetchError);
-                throw fetchError;
-            }
-            console.log('Found congrats entries:', congratsData.length);
+            if (fetchError) throw fetchError;
 
             const { error, count } = await supabase
                 .from('congrats')
                 .delete()
                 .eq('wedding_id', weddingId);
-
-            if (error) {
-                console.error('Error deleting all congrats:', error);
-                throw error;
-            }
-
-            console.log('Deleted congrats count:', count);
+            if (error) throw error;
 
             if (count === 0) {
                 alert('No congratulatory messages found to delete.');
@@ -544,60 +501,85 @@ export default function CMS() {
                 alert(`Successfully deleted ${count} congratulate(s)!`);
             }
         } catch (error) {
-            console.error('Error deleting all congrats:', (error as Error).message);
-            alert(`Failed to delete congratulatory messages: ${(error as Error).message}`);
+            console.error('Error deleting all congrats:', error);
+            alert('Failed to delete congratulatory messages.');
         }
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-rose-50 via-ivory-50 to-pink-50 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-4xl mx-auto">
-                <h1 className="text-4xl font-extrabold text-center text-rose-700 mb-12 tracking-tight">
+        <div className="min-h-screen bg-gradient-to-br from-rose-50 via-ivory-50 to-pink-50 py-4 px-3">
+            <div className="max-w-lg mx-auto">
+                <h1 className="text-2xl font-bold text-center text-rose-700 mb-6 tracking-tight">
                     Wedding Invitation CMS
                 </h1>
 
-                {/* Navigation to Invites Page */}
-                <div className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100">
-                    <h2 className="text-2xl font-semibold mb-6 text-rose-600">Manage Invites</h2>
-                    <Link href="/invites">
+                {/* Navigation to Home Page */}
+                <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-rose-100">
+                    <Link href="/home">
                         <button
-                            className="w-full bg-rose-500 text-white py-3 rounded-lg hover:bg-rose-600 transition-colors duration-300 font-medium"
+                            className="w-full bg-rose-500 text-white py-3 rounded-xl text-lg font-medium hover:bg-rose-600 transition-colors duration-200 active:bg-rose-700"
                         >
-                            Go to Invites Management
+                            Return to Wedding List
                         </button>
                     </Link>
                 </div>
 
+                {/* Navigation to Invites Page */}
+                {weddingId && (
+                    <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-rose-100">
+                        <Link href={`/invites?id=${weddingId}`}>
+                            <button
+                                className="w-full bg-rose-500 text-white py-3 rounded-xl text-lg font-medium hover:bg-rose-600 transition-colors duration-200 active:bg-rose-700"
+                            >
+                                Manage Invites
+                            </button>
+                        </Link>
+                    </div>
+                )}
+
+                {/* View Wedding Page */}
+                {weddingId && (
+                    <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-rose-100">
+                        <Link href={`/wedding?weddingId=${weddingId}&groom_name=${encodeURIComponent(wedding.groom_name)}&bride_name=${encodeURIComponent(wedding.bride_name)}`}>
+                            <button
+                                className="w-full bg-amber-500 text-white py-3 rounded-xl text-lg font-medium hover:bg-amber-600 transition-colors duration-200 active:bg-amber-700"
+                            >
+                                View Wedding
+                            </button>
+                        </Link>
+                    </div>
+                )}
+
                 {/* Cropper Modal */}
                 {imageToCrop && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full">
-                            <h3 className="text-xl font-semibold mb-4 text-rose-600">
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-3">
+                        <div className="bg-white p-4 rounded-xl shadow-lg w-full max-w-md">
+                            <h3 className="text-lg font-semibold mb-3 text-rose-600">
                                 Crop {cropField === 'groom_img' ? 'Groom Image' : 'Bride Image'}
                             </h3>
                             <ReactCrop
                                 crop={crop}
                                 onChange={(_, percentCrop) => setCrop(percentCrop)}
                                 onComplete={handleCropComplete}
-                                aspect={1} // Optional: enforce square crop
+                                aspect={1}
                             >
                                 <img
                                     src={imageToCrop}
                                     ref={imageRef}
                                     alt="Image to crop"
-                                    className="max-w-full max-h-[400px]"
+                                    className="w-full max-h-[50vh] object-contain"
                                 />
                             </ReactCrop>
-                            <div className="flex justify-end mt-4 space-x-2">
+                            <div className="flex justify-end mt-3 space-x-2">
                                 <button
                                     onClick={handleCropCancel}
-                                    className="bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                                    className="bg-gray-300 text-gray-700 py-2 px-4 rounded-xl text-sm hover:bg-gray-400 transition-colors duration-200 active:bg-gray-500"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleCropSave}
-                                    className="bg-rose-500 text-white py-2 px-4 rounded-lg hover:bg-rose-600 transition-colors"
+                                    className="bg-rose-500 text-white py-2 px-4 rounded-xl text-sm hover:bg-rose-600 transition-colors duration-200 active:bg-rose-700"
                                     disabled={!croppedImage}
                                 >
                                     Save Crop
@@ -606,21 +588,21 @@ export default function CMS() {
                         </div>
                     </div>
                 )}
-                
+
                 {/* Wedding Details Section */}
                 <form
                     onSubmit={handleWeddingSubmit}
-                    className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100"
+                    className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-rose-100"
                 >
-                    <h2 className="text-2xl font-semibold mb-6 text-rose-600">Wedding Details</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <h2 className="text-lg font-semibold mb-4 text-rose-600">Wedding Details</h2>
+                    <div className="space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Nama Panggilan Pengantin Pria</label>
                             <input
                                 type="text"
                                 value={wedding.groom}
                                 onChange={(e) => setWedding({ ...wedding, groom: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 required
                             />
                         </div>
@@ -630,7 +612,7 @@ export default function CMS() {
                                 type="text"
                                 value={wedding.bride}
                                 onChange={(e) => setWedding({ ...wedding, bride: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 required
                             />
                         </div>
@@ -640,7 +622,7 @@ export default function CMS() {
                                 type="text"
                                 value={wedding.groom_initial}
                                 onChange={(e) => setWedding({ ...wedding, groom_initial: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                             />
                         </div>
                         <div>
@@ -649,7 +631,7 @@ export default function CMS() {
                                 type="text"
                                 value={wedding.bride_initial}
                                 onChange={(e) => setWedding({ ...wedding, bride_initial: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                             />
                         </div>
                         <div>
@@ -658,7 +640,7 @@ export default function CMS() {
                                 type="text"
                                 value={wedding.groom_name}
                                 onChange={(e) => setWedding({ ...wedding, groom_name: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 required
                             />
                         </div>
@@ -668,7 +650,7 @@ export default function CMS() {
                                 type="text"
                                 value={wedding.bride_name}
                                 onChange={(e) => setWedding({ ...wedding, bride_name: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 required
                             />
                         </div>
@@ -677,7 +659,7 @@ export default function CMS() {
                             <textarea
                                 value={wedding.groom_desc}
                                 onChange={(e) => setWedding({ ...wedding, groom_desc: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 rows={4}
                             />
                         </div>
@@ -686,20 +668,20 @@ export default function CMS() {
                             <textarea
                                 value={wedding.bride_desc}
                                 onChange={(e) => setWedding({ ...wedding, bride_desc: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 rows={4}
                             />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Foto Pengantin Pria</label>
                             {typeof wedding.groom_img === 'string' && wedding.groom_img && (
-                                <div className="mb-4 relative w-full h-40">
+                                <div className="mb-4 relative w-full h-48">
                                     <Image
                                         src={wedding.groom_img}
                                         alt="Current Groom Image"
                                         fill
-                                        className="object-cover rounded-lg shadow-sm"
-                                        sizes="(max-width: 640px) 100vw, 50vw"
+                                        className="object-cover rounded-xl shadow-sm"
+                                        sizes="100vw"
                                     />
                                 </div>
                             )}
@@ -710,19 +692,19 @@ export default function CMS() {
                                 type="file"
                                 accept="image/*"
                                 onChange={(e) => handleImageChange(e, 'groom_img')}
-                                className="w-full p-3 text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 transition-colors"
+                                className="w-full p-3 text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-rose-100 file:text-rose-700 file:text-sm hover:file:bg-rose-200 transition-colors"
                             />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Foto Pengantin Wanita</label>
                             {typeof wedding.bride_img === 'string' && wedding.bride_img && (
-                                <div className="mb-4 relative w-full h-40">
+                                <div className="mb-4 relative w-full h-48">
                                     <Image
                                         src={wedding.bride_img}
                                         alt="Current Bride Image"
                                         fill
-                                        className="object-cover rounded-lg shadow-sm"
-                                        sizes="(max-width: 640px) 100vw, 50vw"
+                                        className="object-cover rounded-xl shadow-sm"
+                                        sizes="100vw"
                                     />
                                 </div>
                             )}
@@ -733,19 +715,19 @@ export default function CMS() {
                                 type="file"
                                 accept="image/*"
                                 onChange={(e) => handleImageChange(e, 'bride_img')}
-                                className="w-full p-3 text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 transition-colors"
+                                className="w-full p-3 text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-rose-100 file:text-rose-700 file:text-sm hover:file:bg-rose-200 transition-colors"
                             />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Foto Modal</label>
                             {typeof wedding.modal_img === 'string' && wedding.modal_img && (
-                                <div className="mb-4 relative w-full h-40">
+                                <div className="mb-4 relative w-full h-48">
                                     <Image
                                         src={wedding.modal_img}
                                         alt="Current Modal Image"
                                         fill
-                                        className="object-cover rounded-lg shadow-sm"
-                                        sizes="(max-width: 640px) 100vw, 50vw"
+                                        className="object-cover rounded-xl shadow-sm"
+                                        sizes="100vw"
                                     />
                                 </div>
                             )}
@@ -756,7 +738,7 @@ export default function CMS() {
                                 type="file"
                                 accept="image/*"
                                 onChange={(e) => setWedding({ ...wedding, modal_img: e.target.files?.[0] || null })}
-                                className="w-full p-3 text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 transition-colors"
+                                className="w-full p-3 text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-rose-100 file:text-rose-700 file:text-sm hover:file:bg-rose-200 transition-colors"
                             />
                         </div>
                         <div>
@@ -764,7 +746,7 @@ export default function CMS() {
                             <textarea
                                 value={wedding.description}
                                 onChange={(e) => setWedding({ ...wedding, description: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 rows={4}
                             />
                         </div>
@@ -774,7 +756,7 @@ export default function CMS() {
                                 type="text"
                                 value={wedding.place}
                                 onChange={(e) => setWedding({ ...wedding, place: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 required
                             />
                         </div>
@@ -784,7 +766,7 @@ export default function CMS() {
                                 type="date"
                                 value={wedding.date}
                                 onChange={(e) => setWedding({ ...wedding, date: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 required
                             />
                         </div>
@@ -794,7 +776,7 @@ export default function CMS() {
                                 type="text"
                                 value={wedding.day}
                                 onChange={(e) => setWedding({ ...wedding, day: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 placeholder="e.g., Saturday"
                                 required
                             />
@@ -805,7 +787,7 @@ export default function CMS() {
                                 type="time"
                                 value={wedding.time}
                                 onChange={(e) => setWedding({ ...wedding, time: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 required
                             />
                         </div>
@@ -815,7 +797,7 @@ export default function CMS() {
                                 type="time"
                                 value={wedding.contract_time}
                                 onChange={(e) => setWedding({ ...wedding, contract_time: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 required
                             />
                         </div>
@@ -824,23 +806,23 @@ export default function CMS() {
                             <textarea
                                 value={wedding.invite_desc}
                                 onChange={(e) => setWedding({ ...wedding, invite_desc: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 rows={4}
                             />
                         </div>
                     </div>
                     <button
                         type="submit"
-                        className="mt-6 w-full bg-rose-500 text-white py-3 rounded-lg hover:bg-rose-600 transition-colors duration-300 font-medium"
+                        className="mt-4 w-full bg-rose-500 text-white py-3 rounded-xl text-lg font-medium hover:bg-rose-600 transition-colors duration-200 active:bg-rose-700"
                     >
                         {weddingId ? 'Update Wedding Details' : 'Save Wedding Details'}
                     </button>
                 </form>
 
                 {/* Moments Section */}
-                <div className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100">
-                    <h2 className="text-2xl font-semibold mb-6 text-rose-600">Moments</h2>
-                    <form onSubmit={handleMomentsSubmit} className="mb-6">
+                <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-rose-100">
+                    <h2 className="text-lg font-semibold mb-4 text-rose-600">Moments</h2>
+                    <form onSubmit={handleMomentsSubmit} className="mb-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Upload Moment Images</label>
                             <input
@@ -848,31 +830,31 @@ export default function CMS() {
                                 accept="image/*"
                                 multiple
                                 onChange={(e) => setNewMoments({ moments_img: Array.from(e.target.files || []) })}
-                                className="w-full p-3 text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 transition-colors"
+                                className="w-full p-3 text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-rose-100 file:text-rose-700 file:text-sm hover:file:bg-rose-200 transition-colors"
                             />
                         </div>
                         <button
                             type="submit"
-                            className="mt-4 bg-rose-500 text-white py-3 px-6 rounded-lg hover:bg-rose-600 transition-colors duration-300 font-medium"
+                            className="mt-3 w-full bg-rose-500 text-white py-3 rounded-xl text-lg font-medium hover:bg-rose-600 transition-colors duration-200 active:bg-rose-700"
                         >
                             Add Moments
                         </button>
                     </form>
                     {moments.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-2 gap-4">
                             {moments.map((moment) =>
                                 moment.moments_img.map((img, index) => (
-                                    <div key={`${moment.id}-${index}`} className="relative w-full h-64 group">
+                                    <div key={`${moment.id}-${index}`} className="relative w-full h-40">
                                         <Image
                                             src={img}
                                             alt={`Moment ${index + 1}`}
                                             fill
-                                            className="object-cover rounded-lg shadow-md transition-transform duration-300 group-hover:scale-105"
-                                            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
+                                            className="object-cover rounded-xl shadow-sm"
+                                            sizes="(max-width: 640px) 50vw, 25vw"
                                         />
                                         <button
                                             onClick={() => handleDeleteMoment(moment.id, moment.moments_img)}
-                                            className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors duration-300 opacity-0 group-hover:opacity-100"
+                                            className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full text-xs hover:bg-red-600 transition-colors duration-200"
                                         >
                                             Delete
                                         </button>
@@ -881,21 +863,21 @@ export default function CMS() {
                             )}
                         </div>
                     ) : (
-                        <p className="text-gray-500 italic">No moments added yet.</p>
+                        <p className="text-gray-500 text-sm italic">No moments added yet.</p>
                     )}
                 </div>
 
                 {/* Gift Envelopes Section */}
-                <div className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100">
-                    <h2 className="text-2xl font-semibold mb-6 text-rose-600">Gift Envelopes</h2>
-                    <form onSubmit={handleGiftSubmit} className="mb-6 space-y-4">
+                <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-rose-100">
+                    <h2 className="text-lg font-semibold mb-4 text-rose-600">Gift Envelopes</h2>
+                    <form onSubmit={handleGiftSubmit} className="mb-4 space-y-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Envelope Name</label>
                             <input
                                 type="text"
                                 value={newGift.envelope_name}
                                 onChange={(e) => setNewGift({ ...newGift, envelope_name: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 required
                             />
                         </div>
@@ -905,7 +887,7 @@ export default function CMS() {
                                 type="text"
                                 value={newGift.rek_name}
                                 onChange={(e) => setNewGift({ ...newGift, rek_name: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 placeholder="e.g., BCA, BRI, Mandiri"
                                 required
                             />
@@ -916,32 +898,32 @@ export default function CMS() {
                                 type="text"
                                 value={newGift.envelope_number}
                                 onChange={(e) => setNewGift({ ...newGift, envelope_number: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
                                 required
                             />
                         </div>
                         <button
                             type="submit"
-                            className="w-full bg-rose-500 text-white py-3 rounded-lg hover:bg-rose-600 transition-colors duration-300 font-medium"
+                            className="w-full bg-rose-500 text-white py-3 rounded-xl text-lg font-medium hover:bg-rose-600 transition-colors duration-200 active:bg-rose-700"
                         >
                             Add Gift
                         </button>
                     </form>
                     {gifts.length > 0 ? (
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                             {gifts.map((gift) => (
                                 <div
                                     key={gift.id}
-                                    className="p-4 bg-rose-50 rounded-lg shadow-sm border-l-4 border-rose-300 flex justify-between items-center transition-transform duration-300 hover:shadow-md"
+                                    className="p-4 bg-rose-50 rounded-xl shadow-sm border-l-4 border-rose-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3"
                                 >
                                     <div>
-                                        <p className="text-gray-700 font-medium">{gift.envelope_name}</p>
-                                        <p className="text-gray-500 text-sm">{gift.rek_name}</p>
-                                        <p className="text-gray-500 text-sm">{gift.envelope_number}</p>
+                                        <p className="text-gray-700 font-medium text-sm">{gift.envelope_name}</p>
+                                        <p className="text-gray-500 text-xs">{gift.rek_name}</p>
+                                        <p className="text-gray-500 text-xs">{gift.envelope_number}</p>
                                     </div>
                                     <button
                                         onClick={() => handleDeleteGift(gift.id)}
-                                        className="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors duration-300"
+                                        className="bg-red-500 text-white py-2 px-4 rounded-xl text-sm font-medium hover:bg-red-600 transition-colors duration-200 active:bg-red-700"
                                     >
                                         Delete
                                     </button>
@@ -949,19 +931,19 @@ export default function CMS() {
                             ))}
                         </div>
                     ) : (
-                        <p className="text-gray-500 italic">No gifts added yet.</p>
+                        <p className="text-gray-500 text-sm italic">No gifts added yet.</p>
                     )}
                 </div>
 
                 {/* Music Section */}
                 <form
                     onSubmit={handleAssetSubmit}
-                    className="mb-12 p-8 bg-white rounded-2xl shadow-lg border border-rose-100"
+                    className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-rose-100"
                 >
-                    <h2 className="text-2xl font-semibold mb-6 text-rose-600">Update Music</h2>
+                    <h2 className="text-lg font-semibold mb-4 text-rose-600">Update Music</h2>
                     {asset.music_url && (
                         <div className="mb-4">
-                            <p className="text-gray-600">
+                            <p className="text-gray-600 text-sm">
                                 Current Music:{' '}
                                 <a
                                     href={asset.music_url}
@@ -980,23 +962,23 @@ export default function CMS() {
                             type="file"
                             accept="audio/mp3"
                             onChange={(e) => setAsset({ ...asset, music: e.target.files?.[0] || null })}
-                            className="w-full p-3 text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 transition-colors"
+                            className="w-full p-3 text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-rose-100 file:text-rose-700 file:text-sm hover:file:bg-rose-200 transition-colors"
                         />
                     </div>
                     <button
                         type="submit"
-                        className="mt-4 w-full bg-rose-500 text-white py-3 rounded-lg hover:bg-rose-600 transition-colors duration-300 font-medium"
+                        className="mt-3 w-full bg-rose-500 text-white py-3 rounded-xl text-lg font-medium hover:bg-rose-600 transition-colors duration-200 active:bg-rose-700"
                     >
                         Update Music
                     </button>
                 </form>
 
                 {/* Manage Congrats Section */}
-                <div className="p-8 bg-white rounded-2xl shadow-lg border border-rose-100">
-                    <h2 className="text-2xl font-semibold mb-6 text-rose-600">Manage Congrats</h2>
+                <div className="p-4 bg-white rounded-xl shadow-sm border border-rose-100">
+                    <h2 className="text-lg font-semibold mb-4 text-rose-600">Manage Congrats</h2>
                     <button
                         onClick={handleDeleteAllCongrats}
-                        className="w-full bg-red-500 text-white py-3 rounded-lg hover:bg-red-600 transition-colors duration-300 font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        className="w-full bg-red-500 text-white py-3 rounded-xl text-lg font-medium hover:bg-red-600 transition-colors duration-200 active:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                         disabled={!weddingId}
                     >
                         Delete All Congrats
