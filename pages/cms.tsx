@@ -537,16 +537,22 @@ export default function CMS() {
                     </div>
                 )}
 
-                {/* View Wedding Page */}
                 {weddingId && (
                     <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-rose-100">
-                        <Link href={`/wedding?weddingId=${weddingId}&groom_name=${encodeURIComponent(wedding.groom_name)}&bride_name=${encodeURIComponent(wedding.bride_name)}`}>
-                            <button
-                                className="w-full bg-amber-500 text-white py-3 rounded-xl text-lg font-medium hover:bg-amber-600 transition-colors duration-200 active:bg-amber-700"
-                            >
-                                View Wedding
-                            </button>
-                        </Link>
+                        <button
+                            className="w-full bg-amber-500 text-white py-3 rounded-xl text-lg font-medium hover:bg-amber-600 transition-colors duration-200 active:bg-amber-700"
+                            onClick={() => {
+                                const url = `${window.location.origin}/wedding?weddingId=${weddingId}&groom_name=${encodeURIComponent(wedding.groom_name)}&bride_name=${encodeURIComponent(wedding.bride_name)}`;
+                                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                                if (isMobile) {
+                                    window.open(url, '_blank');
+                                } else {
+                                    window.open(url, '_blank');
+                                }
+                            }}
+                        >
+                            View Wedding
+                        </button>
                     </div>
                 )}
 

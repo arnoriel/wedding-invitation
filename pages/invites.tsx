@@ -161,7 +161,7 @@ export default function Invites() {
     };
 
     const generateShareLink = (invitedName: string) => {
-        const baseUrl = 'https://wedding-invitation-six-iota.vercel.app';
+        const baseUrl = 'https://pernikahan-kita.vercel.app';
         const encodedName = encodeURIComponent(invitedName);
         const encodedGroomName = encodeURIComponent(wedding?.groom_name || 'Mempelai Pria');
         const encodedBrideName = encodeURIComponent(wedding?.bride_name || 'Mempelai Wanita');
