@@ -52,6 +52,13 @@ interface NewGift {
     rek_name: string;
 }
 
+interface Notification {
+    message: string;
+    type: 'success' | 'error' | 'confirm';
+    onConfirm?: () => void;
+    onCancel?: () => void;
+}
+
 export default function CMS() {
     const [wedding, setWedding] = useState<WeddingForm>({
         groom: '',
@@ -79,6 +86,8 @@ export default function CMS() {
     const [newGift, setNewGift] = useState<NewGift>({ envelope_name: '', envelope_number: '', rek_name: '' });
     const [asset, setAsset] = useState<Asset>({ id: undefined, music: null, music_url: null });
     const [weddingId, setWeddingId] = useState<string | null>(null);
+    const [copySuccess, setCopySuccess] = useState(false);
+    const [notification, setNotification] = useState<Notification | null>(null);
     const router = useRouter();
     const { id } = router.query;
 
@@ -89,6 +98,31 @@ export default function CMS() {
     const [cropField, setCropField] = useState<'groom_img' | 'bride_img' | null>(null);
     const imageRef = useRef<HTMLImageElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+    // Notification auto-dismiss
+    useEffect(() => {
+        if (notification && notification.type !== 'confirm') {
+            const timer = setTimeout(() => {
+                setNotification(null);
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
+
+    const handleCopyLink = async () => {
+        if (!weddingId) return;
+        
+        const invitationLink = `${window.location.origin}/invites?id=${weddingId}`;
+        try {
+            await navigator.clipboard.writeText(invitationLink);
+            setCopySuccess(true);
+            setNotification({ message: 'Link copied successfully!', type: 'success' });
+            setTimeout(() => setCopySuccess(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+            setNotification({ message: 'Failed to copy link.', type: 'error' });
+        }
+    };
 
     useEffect(() => {
         async function fetchData() {
@@ -151,6 +185,7 @@ export default function CMS() {
                 }
             } catch (error) {
                 console.error('Error fetching data:', error);
+                setNotification({ message: 'Failed to fetch data.', type: 'error' });
             }
         }
         fetchData();
@@ -192,7 +227,7 @@ export default function CMS() {
                 setCroppedImage(croppedBlob);
             } catch (error) {
                 console.error('Error cropping image:', error);
-                alert('Failed to crop image.');
+                setNotification({ message: 'Failed to crop image.', type: 'error' });
             }
         }
     };
@@ -204,6 +239,7 @@ export default function CMS() {
             setImageToCrop(null);
             setCropField(null);
             setCroppedImage(null);
+            setNotification({ message: 'Image cropped successfully!', type: 'success' });
         }
     };
 
@@ -288,7 +324,7 @@ export default function CMS() {
                     })
                     .eq('id', weddingId);
                 if (error) throw error;
-                alert('Wedding details updated!');
+                setNotification({ message: 'Wedding details updated!', type: 'success' });
             } else {
                 const { data, error } = await supabase
                     .from('wedding')
@@ -316,7 +352,7 @@ export default function CMS() {
                     .single();
                 if (error) throw error;
                 setWeddingId(data.id);
-                alert('Wedding details saved!');
+                setNotification({ message: 'Wedding details saved!', type: 'success' });
             }
             setWedding({
                 ...wedding,
@@ -326,14 +362,14 @@ export default function CMS() {
             });
         } catch (error) {
             console.error('Error saving wedding:', error);
-            alert('Failed to save wedding details.');
+            setNotification({ message: 'Failed to save wedding details.', type: 'error' });
         }
     };
 
     const handleMomentsSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!weddingId) {
-            alert('Please save wedding details first.');
+            setNotification({ message: 'Please save wedding details first.', type: 'error' });
             return;
         }
         try {
@@ -356,12 +392,12 @@ export default function CMS() {
                     .select();
                 if (error) throw error;
                 setMoments([...moments, ...data]);
-                alert('Moments saved!');
+                setNotification({ message: 'Moments saved!', type: 'success' });
                 setNewMoments({ moments_img: [] });
             }
         } catch (error) {
             console.error('Error saving moments:', error);
-            alert('Failed to save moments.');
+            setNotification({ message: 'Failed to save moments.', type: 'error' });
         }
     };
 
@@ -377,17 +413,17 @@ export default function CMS() {
             if (error) throw error;
 
             setMoments(moments.filter((moment) => moment.id !== momentId));
-            alert('Moment deleted!');
+            setNotification({ message: 'Moment deleted!', type: 'success' });
         } catch (error) {
             console.error('Error deleting moment:', error);
-            alert('Failed to delete moment.');
+            setNotification({ message: 'Failed to delete moment.', type: 'error' });
         }
     };
 
     const handleGiftSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!weddingId) {
-            alert('Please save wedding details first.');
+            setNotification({ message: 'Please save wedding details first.', type: 'error' });
             return;
         }
         try {
@@ -402,11 +438,11 @@ export default function CMS() {
                 .select();
             if (error) throw error;
             setGifts([...gifts, ...data]);
-            alert('Gift saved!');
+            setNotification({ message: 'Gift saved!', type: 'success' });
             setNewGift({ envelope_name: '', envelope_number: '', rek_name: '' });
         } catch (error) {
             console.error('Error saving gift:', error);
-            alert('Failed to save gift.');
+            setNotification({ message: 'Failed to save gift.', type: 'error' });
         }
     };
 
@@ -415,17 +451,17 @@ export default function CMS() {
             const { error } = await supabase.from('gifts').delete().eq('id', giftId);
             if (error) throw error;
             setGifts(gifts.filter((gift) => gift.id !== giftId));
-            alert('Gift deleted!');
+            setNotification({ message: 'Gift deleted!', type: 'success' });
         } catch (error) {
             console.error('Error deleting gift:', error);
-            alert('Failed to delete gift.');
+            setNotification({ message: 'Failed to delete gift.', type: 'error' });
         }
     };
 
     const handleAssetSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!weddingId) {
-            alert('Please save wedding details first.');
+            setNotification({ message: 'Please save wedding details first.', type: 'error' });
             return;
         }
         try {
@@ -466,92 +502,121 @@ export default function CMS() {
                 setAsset({ id: data.id, music: null, music_url: musicUrl });
             }
 
-            alert('Music asset updated!');
+            setNotification({ message: 'Music asset updated!', type: 'success' });
             setAsset((prev) => ({ ...prev, music: null }));
         } catch (error) {
             console.error('Error updating asset:', error);
-            alert('Failed to update music asset.');
+            setNotification({ message: 'Failed to update music asset.', type: 'error' });
         }
     };
 
     const handleDeleteAllCongrats = async () => {
         if (!weddingId) {
-            alert('Please save wedding details first.');
+            setNotification({ message: 'Please save wedding details first.', type: 'error' });
             return;
         }
-        if (!confirm('Are you sure you want to delete all congratulatory messages? This action cannot be undone.')) {
-            return;
-        }
-        try {
-            const { error: fetchError } = await supabase
-                .from('congrats')
-                .select('id')
-                .eq('wedding_id', weddingId);
-            if (fetchError) throw fetchError;
+        setNotification({
+            message: 'Are you sure you want to delete all congratulatory messages? This action cannot be undone.',
+            type: 'confirm',
+            onConfirm: async () => {
+                try {
+                    const { error: fetchError } = await supabase
+                        .from('congrats')
+                        .select('id')
+                        .eq('wedding_id', weddingId);
+                    if (fetchError) throw fetchError;
 
-            const { error, count } = await supabase
-                .from('congrats')
-                .delete()
-                .eq('wedding_id', weddingId);
-            if (error) throw error;
+                    const { error, count } = await supabase
+                        .from('congrats')
+                        .delete()
+                        .eq('wedding_id', weddingId);
+                    if (error) throw error;
 
-            if (count === 0) {
-                alert('No congratulatory messages found to delete.');
-            } else {
-                alert(`Successfully deleted ${count} congratulate(s)!`);
-            }
-        } catch (error) {
-            console.error('Error deleting all congrats:', error);
-            alert('Failed to delete congratulatory messages.');
-        }
+                    setNotification({
+                        message: count === 0 ? 'No congratulatory messages found to delete.' : `Successfully deleted ${count} congratulate(s)!`,
+                        type: 'success'
+                    });
+                } catch (error) {
+                    console.error('Error deleting all congrats:', error);
+                    setNotification({ message: 'Failed to delete congratulatory messages.', type: 'error' });
+                }
+            },
+            onCancel: () => setNotification(null)
+        });
     };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-rose-50 via-ivory-50 to-pink-50 py-4 px-3">
-            <div className="max-w-lg mx-auto">
+            <div className="max-w-lg mx-auto relative">
                 <h1 className="text-2xl font-bold text-center text-rose-700 mb-6 tracking-tight">
                     Wedding Invitation CMS
                 </h1>
 
-                {/* Navigation to Home Page */}
-                <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-rose-100">
-                    <Link href="/home">
-                        <button
-                            className="w-full bg-rose-500 text-white py-3 rounded-xl text-lg font-medium hover:bg-rose-600 transition-colors duration-200 active:bg-rose-700"
-                        >
-                            Return to Wedding List
-                        </button>
-                    </Link>
-                </div>
+                {/* Notification Card */}
+                {notification && (
+                    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+                        <div className={`relative bg-white p-4 rounded-xl shadow-lg border ${notification.type === 'success' ? 'border-green-500' : notification.type === 'error' ? 'border-red-500' : 'border-rose-500'} w-80 animate-slide-down`}>
+                            <p className={`text-sm font-medium ${notification.type === 'success' ? 'text-green-600' : notification.type === 'error' ? 'text-red-600' : 'text-rose-600'}`}>
+                                {notification.message}
+                            </p>
+                            {notification.type !== 'confirm' && (
+                                <div className="mt-2 h-1 bg-gray-200 rounded-full overflow-hidden">
+                                    <div className="h-full bg-rose-500 animate-countdown"></div>
+                                </div>
+                            )}
+                            {notification.type === 'confirm' && (
+                                <div className="mt-3 flex justify-end space-x-2">
+                                    <button
+                                        onClick={notification.onCancel}
+                                        className="bg-gray-300 text-gray-700 py-1 px-3 rounded-xl text-sm hover:bg-gray-400 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={notification.onConfirm}
+                                        className="bg-rose-500 text-white py-1 px-3 rounded-xl text-sm hover:bg-rose-600 transition-colors"
+                                    >
+                                        Confirm
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
-                {/* Navigation to Invites Page */}
-                {weddingId && (
-                    <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-rose-100">
-                        <Link href={`/invites?id=${weddingId}`}>
+                {/* Navigation Section */}
+                <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-rose-100">
+                    <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 justify-center">
+                        <Link href="/home">
                             <button
-                                className="w-full bg-rose-500 text-white py-3 rounded-xl text-lg font-medium hover:bg-rose-600 transition-colors duration-200 active:bg-rose-700"
+                                className="w-full sm:w-auto px-4 py-2 bg-rose-500 text-white rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors duration-200 active:bg-rose-700"
                             >
-                                Manage Invites
+                                Wedding List
                             </button>
                         </Link>
+                        {weddingId && (
+                            <>
+                                <button
+                                    onClick={handleCopyLink}
+                                    className={`w-full sm:w-auto px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors duration-200 ${
+                                        copySuccess
+                                            ? 'bg-green-500 hover:bg-green-600 active:bg-green-700'
+                                            : 'bg-rose-500 hover:bg-rose-600 active:bg-rose-700'
+                                    }`}
+                                >
+                                    {copySuccess ? 'Link Copied!' : 'Copy Invitation Link'}
+                                </button>
+                                <Link href={`/preview?weddingId=${weddingId}`}>
+                                    <button
+                                        className="w-full sm:w-auto px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors duration-200 active:bg-amber-700"
+                                    >
+                                        View Wedding
+                                    </button>
+                                </Link>
+                            </>
+                        )}
                     </div>
-                )}
-
-                {weddingId && (
-                    <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-rose-100">
-                        <a
-                            href={`/wedding?weddingId=${weddingId}&groom_name=${encodeURIComponent(wedding.groom_name)}&bride_name=${encodeURIComponent(wedding.bride_name)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
-                            <button
-                                className="w-full bg-amber-500 text-white py-3 rounded-xl text-lg font-medium hover:bg-amber-600 transition-colors duration-200 active:bg-amber-700"
-                            >
-                                View Wedding
-                            </button>
-                        </a>
-                    </div>
-                )}
+                </div>
 
                 {/* Cropper Modal */}
                 {imageToCrop && (
@@ -695,7 +760,7 @@ export default function CMS() {
                                 type="file"
                                 accept="image/*"
                                 onChange={(e) => handleImageChange(e, 'groom_img')}
-                                className="w-full p-3 text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-rose-100 file:text-rose-700 file:text-sm hover:file:bg-rose-200 transition-colors"
+                                className="w-full p-3 text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-rose-100 file:text-rose-700 file:text-sm hover:file:bg-gray-200 transition-colors"
                             />
                         </div>
                         <div>
@@ -718,7 +783,7 @@ export default function CMS() {
                                 type="file"
                                 accept="image/*"
                                 onChange={(e) => handleImageChange(e, 'bride_img')}
-                                className="w-full p-3 text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-rose-100 file:text-rose-700 file:text-sm hover:file:bg-rose-200 transition-colors"
+                                className="w-full p-3 text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-rose-100 file:text-rose-700 file:text-sm hover:file:bg-gray-200 transition-colors"
                             />
                         </div>
                         <div>
@@ -741,7 +806,7 @@ export default function CMS() {
                                 type="file"
                                 accept="image/*"
                                 onChange={(e) => setWedding({ ...wedding, modal_img: e.target.files?.[0] || null })}
-                                className="w-full p-3 text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-rose-100 file:text-rose-700 file:text-sm hover:file:bg-rose-200 transition-colors"
+                                className="w-full p-3 text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-rose-100 file:text-rose-700 file:text-sm hover:file:bg-gray-200 transition-colors"
                             />
                         </div>
                         <div>
@@ -749,7 +814,7 @@ export default function CMS() {
                             <textarea
                                 value={wedding.description}
                                 onChange={(e) => setWedding({ ...wedding, description: e.target.value })}
-                                className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-colors"
+                                className="w-full p-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-200 transition-colors"
                                 rows={4}
                             />
                         </div>
@@ -833,7 +898,7 @@ export default function CMS() {
                                 accept="image/*"
                                 multiple
                                 onChange={(e) => setNewMoments({ moments_img: Array.from(e.target.files || []) })}
-                                className="w-full p-3 text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-rose-100 file:text-rose-700 file:text-sm hover:file:bg-rose-200 transition-colors"
+                                className="w-full p-3 text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-rose-100 file:text-rose-700 file:text-sm hover:file:bg-gray-200 transition-colors"
                             />
                         </div>
                         <button
@@ -965,7 +1030,7 @@ export default function CMS() {
                             type="file"
                             accept="audio/mp3"
                             onChange={(e) => setAsset({ ...asset, music: e.target.files?.[0] || null })}
-                            className="w-full p-3 text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-rose-100 file:text-rose-700 file:text-sm hover:file:bg-rose-200 transition-colors"
+                            className="w-full p-3 text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-rose-100 file:text-rose-700 file:text-sm hover:file:bg-gray-200 transition-colors"
                         />
                     </div>
                     <button
@@ -988,6 +1053,33 @@ export default function CMS() {
                     </button>
                 </div>
             </div>
+            <style jsx>{`
+                .animate-slide-down {
+                    animation: slideDown 0.3s ease-out;
+                }
+                .animate-countdown {
+                    width: 100%;
+                    animation: countdown 3s linear forwards;
+                }
+                @keyframes slideDown {
+                    from {
+                        transform: translateY(-20px);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateY(0);
+                        opacity: 1;
+                    }
+                }
+                @keyframes countdown {
+                    from {
+                        width: 100%;
+                    }
+                    to {
+                        width: 0;
+                    }
+                }
+            `}</style>
         </div>
     );
 }

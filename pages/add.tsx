@@ -1,4 +1,4 @@
-import { useState, FormEvent, useRef } from 'react';
+import { useState, FormEvent, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
@@ -40,6 +40,11 @@ interface Asset {
   music: File | null;
 }
 
+interface Notification {
+  message: string;
+  type: 'success' | 'error';
+}
+
 export default function AddWedding() {
   const [wedding, setWedding] = useState<WeddingForm>({
     groom: '',
@@ -65,6 +70,7 @@ export default function AddWedding() {
   const [newGift, setNewGift] = useState<Gift>({ envelope_name: '', envelope_number: '', rek_name: '' });
   const [asset, setAsset] = useState<Asset>({ music: null });
   const [weddingId, setWeddingId] = useState<string | null>(null);
+  const [notification, setNotification] = useState<Notification | null>(null);
 
   const [crop, setCrop] = useState<Crop>({ unit: '%', x: 25, y: 25, width: 50, height: 50 });
   const [croppedImage, setCroppedImage] = useState<Blob | null>(null);
@@ -72,6 +78,16 @@ export default function AddWedding() {
   const [cropField, setCropField] = useState<'groom_img' | 'bride_img' | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Notification auto-dismiss
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   const getCroppedImg = async (image: HTMLImageElement, crop: PixelCrop): Promise<Blob> => {
     const canvas = canvasRef.current || document.createElement('canvas');
@@ -109,7 +125,7 @@ export default function AddWedding() {
         setCroppedImage(croppedBlob);
       } catch (error) {
         console.error('Error cropping image:', error);
-        alert('Failed to crop image.');
+        setNotification({ message: 'Failed to crop image.', type: 'error' });
       }
     }
   };
@@ -121,6 +137,7 @@ export default function AddWedding() {
       setImageToCrop(null);
       setCropField(null);
       setCroppedImage(null);
+      setNotification({ message: 'Image cropped successfully!', type: 'success' });
     }
   };
 
@@ -207,7 +224,7 @@ export default function AddWedding() {
       if (error) throw error;
 
       setWeddingId(data.id);
-      alert('Wedding details saved!');
+      setNotification({ message: 'Wedding details saved!', type: 'success' });
       setWedding({
         ...wedding,
         groom_img: null,
@@ -216,14 +233,14 @@ export default function AddWedding() {
       });
     } catch (error) {
       console.error('Error saving wedding:', error);
-      alert('Failed to save wedding details.');
+      setNotification({ message: 'Failed to save wedding details.', type: 'error' });
     }
   };
 
   const handleMomentsSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!weddingId) {
-      alert('Please save wedding details first.');
+      setNotification({ message: 'Please save wedding details first.', type: 'error' });
       return;
     }
     try {
@@ -244,23 +261,24 @@ export default function AddWedding() {
           .from('moments')
           .insert({ wedding_id: weddingId, moments_img: momentImgUrls });
         if (error) throw error;
-        alert('Moments saved!');
+        setNotification({ message: 'Moments saved!', type: 'success' });
         setNewMoments({ moments_img: [] });
       }
     } catch (error) {
       console.error('Error saving moments:', error);
-      alert('Failed to save moments.');
+      setNotification({ message: 'Failed to save moments.', type: 'error' });
     }
   };
 
   const handleGiftSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!weddingId) {
-      alert('Please save wedding details first.');
+      setNotification({ message: 'Please save wedding details first.', type: 'error' });
       return;
     }
     try {
-      const { error } = await supabase
+      const { error
+      } = await supabase
         .from('gifts')
         .insert({
           wedding_id: weddingId,
@@ -269,18 +287,18 @@ export default function AddWedding() {
           rek_name: newGift.rek_name,
         });
       if (error) throw error;
-      alert('Gift saved!');
+      setNotification({ message: 'Gift saved!', type: 'success' });
       setNewGift({ envelope_name: '', envelope_number: '', rek_name: '' });
     } catch (error) {
       console.error('Error saving gift:', error);
-      alert('Failed to save gift.');
+      setNotification({ message: 'Failed to save gift.', type: 'error' });
     }
   };
 
   const handleAssetSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!weddingId) {
-      alert('Please save wedding details first.');
+      setNotification({ message: 'Please save wedding details first.', type: 'error' });
       return;
     }
     try {
@@ -300,21 +318,35 @@ export default function AddWedding() {
           .insert({ wedding_id: weddingId, music: musicUrl });
         if (insertError) throw insertError;
 
-        alert('Music asset saved!');
+        setNotification({ message: 'Music asset saved!', type: 'success' });
         setAsset({ music: null });
       }
     } catch (error) {
       console.error('Error saving music:', error);
-      alert('Failed to save music asset.');
+      setNotification({ message: 'Failed to save music asset.', type: 'error' });
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-ivory-50 to-pink-50 py-4 px-3">
-      <div className="max-w-lg mx-auto">
+      <div className="max-w-lg mx-auto relative">
         <h1 className="text-2xl font-bold text-center text-rose-700 mb-6 tracking-tight">
           Add New Wedding
         </h1>
+
+        {/* Notification Card */}
+        {notification && (
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+            <div className={`relative bg-white p-4 rounded-xl shadow-lg border ${notification.type === 'success' ? 'border-green-500' : 'border-red-500'} w-80 animate-slide-down`}>
+              <p className={`text-sm font-medium ${notification.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                {notification.message}
+              </p>
+              <div className="mt-2 h-1 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-full bg-rose-500 animate-countdown"></div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Navigation to Home Page */}
         <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border border-rose-100">
@@ -686,6 +718,33 @@ export default function AddWedding() {
           </div>
         </form>
       </div>
+      <style jsx>{`
+        .animate-slide-down {
+          animation: slideDown 0.3s ease-out;
+        }
+        .animate-countdown {
+          width: 100%;
+          animation: countdown 3s linear forwards;
+        }
+        @keyframes slideDown {
+          from {
+            transform: translateY(-20px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        @keyframes countdown {
+          from {
+            width: 100%;
+          }
+          to {
+            width: 0;
+          }
+        }
+      `}</style>
     </div>
   );
 }
